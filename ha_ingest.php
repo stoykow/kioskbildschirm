@@ -26,10 +26,18 @@ $geraetName = $data['geraet'] ?? '';
 $typ = $data['typ'] ?? null;
 $payload = $data['payload'] ?? null;
 $token = $_SERVER['HTTP_X_AUTH_TOKEN'] ?? null;
+// Beispiel-Token (bitte anpassen)
+$requiredToken = getenv('HO_TOKEN');
 
 if ($geraetName === '' || $payload === null) {
     http_response_code(400);
     echo test_json_error('geraet und payload erforderlich');
+    exit;
+}
+
+if ($token === null || $token !== $requiredToken) {
+    http_response_code(403);
+    echo test_json_error('token erforderlich oder ungueltig');
     exit;
 }
 
@@ -55,16 +63,10 @@ try {
 
     if (!$geraet) {
         $ins = $pdo->prepare("INSERT INTO geraete (name, token, zuletzt_gesehen) VALUES (:name, :token, NOW())");
-        $ins->execute([':name' => $geraetName, ':token' => $token]);
+        $ins->execute([':name' => $geraetName, ':token' => $requiredToken]);
         $geraetId = (int)$pdo->lastInsertId();
     } else {
         $geraetId = (int)$geraet['id'];
-        if ($geraet['token'] !== null && $token !== $geraet['token']) {
-            $pdo->rollBack();
-            http_response_code(403);
-            echo json_encode(['error' => 'Token ungueltig']);
-            exit;
-        }
         $upd = $pdo->prepare("UPDATE geraete SET zuletzt_gesehen = NOW() WHERE id = :id");
         $upd->execute([':id' => $geraetId]);
     }

@@ -30,3 +30,21 @@ CREATE TABLE IF NOT EXISTS abfahrten (
   CONSTRAINT fk_abfahrten_haltestellen FOREIGN KEY (haltestelle_id) REFERENCES haltestellen(id),
   CONSTRAINT fk_abfahrten_linien FOREIGN KEY (linie_id) REFERENCES linien(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS geraete (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(128) NOT NULL UNIQUE,
+  token VARCHAR(128) NULL,
+  erstellt_am TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  zuletzt_gesehen TIMESTAMP NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS geraete_daten (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  geraet_id INT NOT NULL,
+  zeit TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  typ VARCHAR(64) NULL,
+  payload_json LONGTEXT NOT NULL,
+  INDEX idx_geraet_zeit (geraet_id, zeit),
+  CONSTRAINT fk_geraete_daten_geraete FOREIGN KEY (geraet_id) REFERENCES geraete(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

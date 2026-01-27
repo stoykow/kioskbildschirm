@@ -59,7 +59,8 @@ function fetchWeather() {
 }
 
 async function fetchWaste() {
-    fetch('https://kiosk.bi-gr.de/enso.php') // Json-API für Abfallkalender
+    // Same-origin to avoid CORS issues
+    fetch('enso.php') // Json-API für Abfallkalender
         .then(response => response.json())
         .then(data => {
             const wasteDiv = document.getElementById('waste');

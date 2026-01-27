@@ -28,6 +28,7 @@ header("Expires: 0");
     </div>
 
     <script src="kiosk.js?v=<?php echo time(); ?>"></script>
+    
 
 </body>
 </html>

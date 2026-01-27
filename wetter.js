@@ -12,7 +12,7 @@ const GEIGER_LUFTDRUCK = 'sensor.geiger_luftdruck';
 const GEIGER_DOSIS = 'sensor.multigeiger_geiger_dosisleistung';
 
 // Hier den richtigen Entitaetsnamen fuer die Haustuer eintragen
-const TUER_STATUS = 'lock.haustuer';
+const TUER_STATUS = 'lock.haustur';
 
 function sanitizeUnit(unit) {
     if (!unit) {

@@ -30,53 +30,53 @@ $stops = [
     [
         'external_id' => '8010131',
         'name' => 'Görlitz Hbf',
-        'url' => 'https://v6.db.transport.rest/stops/8010131/departures?duration=180&results=20',
+        'url' => 'https://v6.db.transport.rest/stops/8010131/departures?duration=180&results=50',
     ],
     [
         'external_id' => '977263',
         'name' => 'Lutherstraße',
-        'url' => 'https://v6.db.transport.rest/stops/977263/departures?duration=60&results=20',
+        'url' => 'https://v6.db.transport.rest/stops/977263/departures?duration=180&results=50',
     ],
     [
         'external_id' => '977244',
         'name' => 'Melanchthonstraße',
-        'url' => 'https://v6.db.transport.rest/stops/977244/departures?duration=60&results=20',
+        'url' => 'https://v6.db.transport.rest/stops/977244/departures?duration=180&results=50',
     ],
 ];
 
 $pdo->beginTransaction();
 try {
     $stopUpsert = $pdo->prepare(
-        "INSERT INTO stops (external_id, name)
-         VALUES (:external_id, :name)
+        "INSERT INTO haltestellen (externe_id, name)
+         VALUES (:externe_id, :name)
          ON DUPLICATE KEY UPDATE name = VALUES(name)"
     );
 
     $lineUpsert = $pdo->prepare(
-        "INSERT INTO lines (name, mode, product)
-         VALUES (:name, :mode, :product)
-         ON DUPLICATE KEY UPDATE mode = VALUES(mode), product = VALUES(product)"
+        "INSERT INTO linien (name, modus, produkt)
+         VALUES (:name, :modus, :produkt)
+         ON DUPLICATE KEY UPDATE modus = VALUES(modus), produkt = VALUES(produkt)"
     );
 
     $departureUpsert = $pdo->prepare(
-        "INSERT INTO departures
-         (stop_id, line_id, planned_when, when_actual, direction, platform, delay_seconds, cancelled, trip_id)
+        "INSERT INTO abfahrten
+         (haltestelle_id, linie_id, geplante_zeit, tatsaechliche_zeit, richtung, gleis, verzoegerung_sekunden, ausfall, fahrt_id)
          VALUES
-         (:stop_id, :line_id, :planned_when, :when_actual, :direction, :platform, :delay_seconds, :cancelled, :trip_id)
+         (:haltestelle_id, :linie_id, :geplante_zeit, :tatsaechliche_zeit, :richtung, :gleis, :verzoegerung_sekunden, :ausfall, :fahrt_id)
          ON DUPLICATE KEY UPDATE
-           when_actual = VALUES(when_actual),
-           delay_seconds = VALUES(delay_seconds),
-           cancelled = VALUES(cancelled)"
+           tatsaechliche_zeit = VALUES(tatsaechliche_zeit),
+           verzoegerung_sekunden = VALUES(verzoegerung_sekunden),
+           ausfall = VALUES(ausfall)"
     );
 
     foreach ($stops as $stop) {
         $stopUpsert->execute([
-            ':external_id' => $stop['external_id'],
+            ':externe_id' => $stop['external_id'],
             ':name' => $stop['name'],
         ]);
 
         $stopId = $pdo->query(
-            "SELECT id FROM stops WHERE external_id = " . $pdo->quote($stop['external_id']) . " LIMIT 1"
+            "SELECT id FROM haltestellen WHERE externe_id = " . $pdo->quote($stop['external_id']) . " LIMIT 1"
         )->fetchColumn();
 
         $json = @file_get_contents($stop['url']);
@@ -102,12 +102,12 @@ try {
 
             $lineUpsert->execute([
                 ':name' => $lineName,
-                ':mode' => $line['mode'] ?? null,
-                ':product' => $line['product'] ?? null,
+                ':modus' => $line['mode'] ?? null,
+                ':produkt' => $line['product'] ?? null,
             ]);
 
             $lineId = $pdo->query(
-                "SELECT id FROM lines WHERE name = " . $pdo->quote($lineName) . " LIMIT 1"
+                "SELECT id FROM linien WHERE name = " . $pdo->quote($lineName) . " LIMIT 1"
             )->fetchColumn();
 
             $planned = $dep['plannedWhen'] ?? $dep['when'] ?? null;
@@ -117,15 +117,15 @@ try {
             }
 
             $departureUpsert->execute([
-                ':stop_id' => $stopId,
-                ':line_id' => $lineId,
-                ':planned_when' => $planned,
-                ':when_actual' => $when,
-                ':direction' => $dep['direction'] ?? null,
-                ':platform' => $dep['platform'] ?? null,
-                ':delay_seconds' => $dep['delay'] ?? null,
-                ':cancelled' => !empty($dep['cancelled']) ? 1 : 0,
-                ':trip_id' => $dep['tripId'] ?? null,
+                ':haltestelle_id' => $stopId,
+                ':linie_id' => $lineId,
+                ':geplante_zeit' => $planned,
+                ':tatsaechliche_zeit' => $when,
+                ':richtung' => $dep['direction'] ?? null,
+                ':gleis' => $dep['platform'] ?? null,
+                ':verzoegerung_sekunden' => $dep['delay'] ?? null,
+                ':ausfall' => !empty($dep['cancelled']) ? 1 : 0,
+                ':fahrt_id' => $dep['tripId'] ?? null,
             ]);
         }
     }

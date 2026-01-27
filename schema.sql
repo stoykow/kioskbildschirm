@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS abfahrten (
   gleis VARCHAR(32) NULL,
   verzoegerung_sekunden INT NULL,
   ausfall TINYINT(1) NOT NULL DEFAULT 0,
-  fahrt_id VARCHAR(128) NULL,
+  fahrt_id VARCHAR(255) NULL,
   erstellt_am TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uniq_departure (haltestelle_id, linie_id, geplante_zeit, richtung, gleis),
   INDEX idx_stop_when (haltestelle_id, geplante_zeit),

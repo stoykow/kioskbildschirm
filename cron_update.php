@@ -110,10 +110,18 @@ try {
                 "SELECT id FROM linien WHERE name = " . $pdo->quote($lineName) . " LIMIT 1"
             )->fetchColumn();
 
-            $planned = $dep['plannedWhen'] ?? $dep['when'] ?? null;
-            $when = $dep['when'] ?? null;
-            if ($planned === null) {
+            $plannedRaw = $dep['plannedWhen'] ?? $dep['when'] ?? null;
+            $whenRaw = $dep['when'] ?? null;
+            if ($plannedRaw === null) {
                 continue;
+            }
+
+            $plannedDt = new DateTimeImmutable($plannedRaw);
+            $planned = $plannedDt->format('Y-m-d H:i:s');
+            $when = null;
+            if ($whenRaw !== null) {
+                $whenDt = new DateTimeImmutable($whenRaw);
+                $when = $whenDt->format('Y-m-d H:i:s');
             }
 
             $departureUpsert->execute([

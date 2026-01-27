@@ -30,17 +30,17 @@ $stops = [
     [
         'external_id' => '8010131',
         'name' => 'Görlitz Hbf',
-        'url' => 'https://v6.db.transport.rest/stops/8010131/departures?duration=180&results=50',
+        'url' => 'https://v6.db.transport.rest/stops/8010131/departures',
     ],
     [
         'external_id' => '977263',
         'name' => 'Lutherstraße',
-        'url' => 'https://v6.db.transport.rest/stops/977263/departures?duration=180&results=50',
+        'url' => 'https://v6.db.transport.rest/stops/977263/departures',
     ],
     [
         'external_id' => '977244',
         'name' => 'Melanchthonstraße',
-        'url' => 'https://v6.db.transport.rest/stops/977244/departures?duration=180&results=50',
+        'url' => 'https://v6.db.transport.rest/stops/977244/departures',
     ],
 ];
 

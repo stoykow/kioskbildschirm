@@ -33,6 +33,8 @@ if ($limit < 1 || $limit > 50) {
     $limit = 6;
 }
 
+$now = (new DateTimeImmutable('now', new DateTimeZone('Europe/Berlin')))->format('Y-m-d H:i:s');
+
 $stopName = null;
 $modeCondition = '1=1';
 switch ($type) {
@@ -69,11 +71,12 @@ $stmt = $pdo->prepare(
      JOIN linien l ON l.id = a.linie_id
      WHERE h.name = :stop_name
        AND {$modeCondition}
-       AND COALESCE(a.tatsaechliche_zeit, a.geplante_zeit) >= NOW()
+       AND COALESCE(a.tatsaechliche_zeit, a.geplante_zeit) >= :now_time
      ORDER BY a.geplante_zeit ASC
      LIMIT :limit"
 );
 $stmt->bindValue(':stop_name', $stopName, PDO::PARAM_STR);
+$stmt->bindValue(':now_time', $now, PDO::PARAM_STR);
 $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
 $stmt->execute();
 

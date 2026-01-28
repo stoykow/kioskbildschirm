@@ -17,11 +17,13 @@ header("Expires: 0");
     
     <div id="main-flex">
         <div id="links">
-            <div id="weather">L??dt Wetterdaten...</div>
+            <div id="weather">Lädt Wetterdaten...</div>
             <div id="waste">Abfallkalender...</div>
         </div>
         <div id="rechts">
-            <div id="train">L??dt Zugdaten...</div>
+            <div id="train">Lädt Zugdaten...</div>
+            <div id="tram">Lädt Tramdaten...</div>
+            <div id="bus">Lädt Busdaten...</div>
         </div>
     </div>
 
@@ -33,4 +35,3 @@ header("Expires: 0");
 
 </body>
 </html>
-

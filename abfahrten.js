@@ -39,7 +39,7 @@ async function fetchTrams() {
     const tramDiv = document.getElementById('tram');
     tramDiv.textContent = 'Laedt Strassenbahn-Abfahrten...';
     try {
-        const response = await fetch('abfahrten.php?typ=tram&limit=2');
+        const response = await fetch('abfahrten.php?typ=tram&limit=4');
         const departures = await response.json();
 
         if (!Array.isArray(departures) || departures.length === 0) {
@@ -48,9 +48,9 @@ async function fetchTrams() {
         }
 
         tramDiv.innerHTML = `
-            <div class="train-title">Tram ab Lutherstrasse</div>
-            ` + departures.slice(0, 2).map(dep => {
-            const time = new Date(dep.tatsaechliche_zeit || dep.geplante_zeit).toLocaleTimeString('de-DE', {
+            <div class="train-title">Tram ab Bahnhof</div>
+            ` + departures.slice(0, 4).map(dep => {
+            const time = dep.anzeige_zeit || new Date(dep.tatsaechliche_zeit || dep.geplante_zeit).toLocaleTimeString('de-DE', {
                 hour: '2-digit',
                 minute: '2-digit'
             });
@@ -75,7 +75,7 @@ async function fetchBus() {
     const busDiv = document.getElementById('bus');
     busDiv.textContent = 'Laedt Bus-Abfahrten...';
     try {
-        const response = await fetch('abfahrten.php?typ=bus&limit=4');
+        const response = await fetch('abfahrten.php?typ=bus&limit=6');
         const departures = await response.json();
 
         if (!Array.isArray(departures) || departures.length === 0) {
@@ -84,9 +84,9 @@ async function fetchBus() {
         }
 
         busDiv.innerHTML = `
-            <div class="train-title">Bus ab Melanchthonstrasse</div>
-            ` + departures.slice(0, 4).map(dep => {
-            const time = new Date(dep.tatsaechliche_zeit || dep.geplante_zeit).toLocaleTimeString('de-DE', {
+            <div class="train-title">Bus ab Bahnhof</div>
+            ` + departures.slice(0, 6).map(dep => {
+            const time = dep.anzeige_zeit || new Date(dep.tatsaechliche_zeit || dep.geplante_zeit).toLocaleTimeString('de-DE', {
                 hour: '2-digit',
                 minute: '2-digit'
             });

@@ -38,15 +38,15 @@ $modeCondition = '1=1';
 switch ($type) {
     case 'zug':
         $stopName = 'Görlitz Hbf';
-        $modeCondition = "(l.modus = 'train' OR l.produkt IN ('regional','regionalExp','interregional','national','nationalExpress','suburban')) AND (l.produkt IS NULL OR l.produkt NOT IN ('tram','bus'))";
+        $modeCondition = "(l.name LIKE 'RB%' OR l.name LIKE 'RE%')";
         break;
     case 'tram':
-        $stopName = 'Lutherstraße';
-        $modeCondition = "l.modus = 'tram'";
+        $stopName = 'Görlitz Hbf';
+        $modeCondition = "l.produkt = 'tram'";
         break;
     case 'bus':
-        $stopName = 'Melanchthonstraße';
-        $modeCondition = "l.modus = 'bus'";
+        $stopName = 'Görlitz Hbf';
+        $modeCondition = "l.produkt = 'bus'";
         break;
     default:
         http_response_code(400);

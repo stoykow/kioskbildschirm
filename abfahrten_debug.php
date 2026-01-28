@@ -66,4 +66,4 @@ $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
 $stmt->execute();
 
 $rows = $stmt->fetchAll();
-echo json_encode($rows);
+echo json_encode($rows, JSON_UNESCAPED_UNICODE);

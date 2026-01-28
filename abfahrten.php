@@ -37,15 +37,15 @@ $stopName = null;
 $modeCondition = '1=1';
 switch ($type) {
     case 'zug':
-        $stopName = 'Görlitz Hbf';
+        $stopName = 'GÃ¶rlitz Hbf';
         $modeCondition = "(l.modus = 'train' OR l.produkt IN ('regional','regionalExp','interregional','national','nationalExpress','suburban')) AND (l.produkt IS NULL OR l.produkt NOT IN ('tram','bus'))";
         break;
     case 'tram':
-        $stopName = 'Lutherstraße';
+        $stopName = 'LutherstraÃŸe';
         $modeCondition = "l.modus = 'tram'";
         break;
     case 'bus':
-        $stopName = 'Melanchthonstraße';
+        $stopName = 'MelanchthonstraÃŸe';
         $modeCondition = "l.modus = 'bus'";
         break;
     default:
@@ -89,4 +89,4 @@ foreach ($rows as &$row) {
 }
 unset($row);
 
-echo json_encode($rows);
+echo json_encode($rows, JSON_UNESCAPED_UNICODE);

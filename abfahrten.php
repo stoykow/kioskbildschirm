@@ -1,6 +1,7 @@
 <?php
 // Liefert Abfahrten aus der DB als JSON
 
+date_default_timezone_set('Europe/Berlin');
 header('Content-Type: application/json; charset=utf-8');
 
 $dbHost = getenv('DB_HOST') ?: 'localhost';
@@ -33,19 +34,19 @@ if ($limit < 1 || $limit > 50) {
 }
 
 $stopName = null;
-$modeFilter = null;
+$modeCondition = '1=1';
 switch ($type) {
     case 'zug':
         $stopName = 'Görlitz Hbf';
-        $modeFilter = 'train';
+        $modeCondition = "(l.modus = 'train' OR l.produkt IN ('regional','regionalExp','interregional','national','nationalExpress','suburban'))";
         break;
     case 'tram':
         $stopName = 'Lutherstraße';
-        $modeFilter = 'tram';
+        $modeCondition = "l.modus = 'tram'";
         break;
     case 'bus':
         $stopName = 'Melanchthonstraße';
-        $modeFilter = 'bus';
+        $modeCondition = "l.modus = 'bus'";
         break;
     default:
         http_response_code(400);
@@ -60,20 +61,32 @@ $stmt = $pdo->prepare(
         a.richtung,
         a.gleis,
         a.ausfall,
-        l.name AS linie
+        l.name AS linie,
+        l.modus,
+        l.produkt
      FROM abfahrten a
      JOIN haltestellen h ON h.id = a.haltestelle_id
      JOIN linien l ON l.id = a.linie_id
      WHERE h.name = :stop_name
-       AND (:mode_filter IS NULL OR l.modus = :mode_filter)
+       AND {$modeCondition}
        AND COALESCE(a.tatsaechliche_zeit, a.geplante_zeit) >= NOW()
      ORDER BY a.geplante_zeit ASC
      LIMIT :limit"
 );
 $stmt->bindValue(':stop_name', $stopName, PDO::PARAM_STR);
-$stmt->bindValue(':mode_filter', $modeFilter, PDO::PARAM_STR);
 $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
 $stmt->execute();
 
 $rows = $stmt->fetchAll();
+
+$tz = new DateTimeZone('Europe/Berlin');
+foreach ($rows as &$row) {
+    $time = $row['tatsaechliche_zeit'] ?: $row['geplante_zeit'];
+    if ($time) {
+        $dt = new DateTimeImmutable($time, $tz);
+        $row['anzeige_zeit'] = $dt->format('H:i');
+    }
+}
+unset($row);
+
 echo json_encode($rows);

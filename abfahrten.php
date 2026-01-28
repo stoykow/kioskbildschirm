@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // Liefert Abfahrten aus der DB als JSON
 
 header('Content-Type: application/json; charset=utf-8');
@@ -32,16 +32,20 @@ if ($limit < 1 || $limit > 50) {
     $limit = 6;
 }
 
-\$stopName = null;\r\n\$modeFilter = null;
+$stopName = null;
+$modeFilter = null;
 switch ($type) {
     case 'zug':
-        $stopName = 'G??rlitz Hbf';
+        $stopName = 'GÃ¶rlitz Hbf';
+        $modeFilter = 'train';
         break;
     case 'tram':
-        $stopName = 'Lutherstra??e';
+        $stopName = 'LutherstraÃŸe';
+        $modeFilter = 'tram';
         break;
     case 'bus':
-        $stopName = 'Melanchthonstra??e';
+        $stopName = 'MelanchthonstraÃŸe';
+        $modeFilter = 'bus';
         break;
     default:
         http_response_code(400);
@@ -60,14 +64,16 @@ $stmt = $pdo->prepare(
      FROM abfahrten a
      JOIN haltestellen h ON h.id = a.haltestelle_id
      JOIN linien l ON l.id = a.linie_id
-     WHERE h.name = :stop_name\r\n       AND (:mode_filter IS NULL OR l.modus = :mode_filter)\r\n       AND COALESCE(a.tatsaechliche_zeit, a.geplante_zeit) >= NOW()
+     WHERE h.name = :stop_name
+       AND (:mode_filter IS NULL OR l.modus = :mode_filter)
+       AND COALESCE(a.tatsaechliche_zeit, a.geplante_zeit) >= NOW()
      ORDER BY a.geplante_zeit ASC
      LIMIT :limit"
 );
 $stmt->bindValue(':stop_name', $stopName, PDO::PARAM_STR);
+$stmt->bindValue(':mode_filter', $modeFilter, PDO::PARAM_STR);
 $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
 $stmt->execute();
 
 $rows = $stmt->fetchAll();
 echo json_encode($rows);
-

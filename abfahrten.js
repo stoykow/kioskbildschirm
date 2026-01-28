@@ -16,7 +16,7 @@ async function fetchTrains() {
         trainDiv.innerHTML = `
             <div class="train-title">Zuege ab Goerlitz Hbf</div>
             ` + trainOnly.slice(0, 6).map(dep => {
-            const time = new Date(dep.tatsaechliche_zeit || dep.geplante_zeit).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+            const time = dep.anzeige_zeit || new Date(dep.tatsaechliche_zeit || dep.geplante_zeit).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
             const line = dep.linie || '';
             const direction = dep.richtung || '';
             const platform = dep.gleis ? `Gleis ${dep.gleis}` : '';

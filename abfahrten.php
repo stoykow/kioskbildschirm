@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // Liefert Abfahrten aus der DB als JSON
 
 header('Content-Type: application/json; charset=utf-8');
@@ -36,15 +36,15 @@ $stopName = null;
 $modeFilter = null;
 switch ($type) {
     case 'zug':
-        $stopName = 'GÃ¶rlitz Hbf';
+        $stopName = 'Görlitz Hbf';
         $modeFilter = 'train';
         break;
     case 'tram':
-        $stopName = 'LutherstraÃŸe';
+        $stopName = 'Lutherstraße';
         $modeFilter = 'tram';
         break;
     case 'bus':
-        $stopName = 'MelanchthonstraÃŸe';
+        $stopName = 'Melanchthonstraße';
         $modeFilter = 'bus';
         break;
     default:

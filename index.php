@@ -15,7 +15,7 @@ header("Expires: 0");
 <body>
     <div id="date-time"></div>
     
-    <div id="main-flex" style="display: flex; flex-direction: row; align-items: flex-start; width: 100vw; justify-content: center; gap: 2vw;">
+    <div id="main-flex">
         <div id="links">
             <div id="weather">Lädt Wetterdaten...</div>
             <div id="waste">Abfallkalender...</div>

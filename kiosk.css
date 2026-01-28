@@ -9,14 +9,16 @@ body {
     color: #fff;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
     min-height: 100vh;
     height: auto;
     font-size: clamp(12px, 1.1vw + 0.6vh, 22px);
     margin: 0;
+    padding: clamp(0.6rem, 1.2vw, 1.4rem) 0;
     cursor: none;
     font-family: 'Segoe UI', 'Arial', sans-serif;
+    overflow-x: hidden;
 }
 
 #date-time {
@@ -109,6 +111,10 @@ body {
 .train-direction {
     font-weight: 500;
     color: #fff;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 .train-platform {
     font-weight: 400;
@@ -133,6 +139,7 @@ body {
 .weather-row, .waste-row {
     display: flex;
     justify-content: space-between;
+    gap: 0.6rem;
     width: 100%;
     background: rgba(255,255,255,0.07);
     border-radius: 0.7rem;
@@ -145,10 +152,34 @@ body {
 .weather-label {
     font-weight: 400;
     color: #aaa;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 .weather-value {
     font-weight: 500;
     color: #fff;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (max-width: 1200px) {
+    #main-flex {
+        grid-template-columns: 1fr;
+        width: 100%;
+    }
+
+    #links, #rechts {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    #date-time {
+        font-size: clamp(20px, 4.5vw, 48px);
+    }
 }
 
 @media (max-width: 1920px) {

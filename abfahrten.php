@@ -32,16 +32,16 @@ if ($limit < 1 || $limit > 50) {
     $limit = 6;
 }
 
-$stopName = null;
+\$stopName = null;\r\n\$modeFilter = null;
 switch ($type) {
     case 'zug':
-        $stopName = 'Görlitz Hbf';
+        $stopName = 'G??rlitz Hbf';
         break;
     case 'tram':
-        $stopName = 'Lutherstraße';
+        $stopName = 'Lutherstra??e';
         break;
     case 'bus':
-        $stopName = 'Melanchthonstraße';
+        $stopName = 'Melanchthonstra??e';
         break;
     default:
         http_response_code(400);
@@ -60,8 +60,7 @@ $stmt = $pdo->prepare(
      FROM abfahrten a
      JOIN haltestellen h ON h.id = a.haltestelle_id
      JOIN linien l ON l.id = a.linie_id
-     WHERE h.name = :stop_name
-       AND COALESCE(a.tatsaechliche_zeit, a.geplante_zeit) >= NOW()
+     WHERE h.name = :stop_name\r\n       AND (:mode_filter IS NULL OR l.modus = :mode_filter)\r\n       AND COALESCE(a.tatsaechliche_zeit, a.geplante_zeit) >= NOW()
      ORDER BY a.geplante_zeit ASC
      LIMIT :limit"
 );
@@ -71,3 +70,4 @@ $stmt->execute();
 
 $rows = $stmt->fetchAll();
 echo json_encode($rows);
+

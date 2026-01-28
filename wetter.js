@@ -53,6 +53,24 @@ function pickValue(payload, entityId) {
     return { value: e.state, unit };
 }
 
+function formatPressure(press) {
+    if (!press) {
+        return null;
+    }
+    const raw = parseFloat(press.value);
+    if (Number.isNaN(raw)) {
+        return { value: press.value, unit: press.unit || 'hPa' };
+    }
+    const unit = (press.unit || '').toLowerCase();
+    if (unit === 'pa') {
+        return { value: (raw / 100).toFixed(1), unit: 'hPa' };
+    }
+    if (unit === 'hpa') {
+        return { value: raw.toFixed(1), unit: 'hPa' };
+    }
+    return { value: press.value, unit: press.unit || 'hPa' };
+}
+
 async function fetchWeather() {
     try {
         const geiger = await fetchHaGeraet(GEIGER_GERAET);
@@ -60,14 +78,14 @@ async function fetchWeather() {
 
         const temp = pickValue(geiger, GEIGER_TEMPERATUR);
         const hum = pickValue(geiger, GEIGER_LUFTFEUCHTE);
-        const press = pickValue(geiger, GEIGER_LUFTDRUCK);
+        const press = formatPressure(pickValue(geiger, GEIGER_LUFTDRUCK));
         const dosis = pickValue(geiger, GEIGER_DOSIS);
         const tuerStatus = tuer && tuer[TUER_STATUS] ? tuer[TUER_STATUS].state : null;
 
         const rows = [
             { label: 'Temperatur:', value: temp ? `${temp.value} ${temp.unit || 'C'}` : 'n.v.' },
             { label: 'Luftfeuchte:', value: hum ? `${hum.value} ${hum.unit || '%'}` : 'n.v.' },
-            { label: 'Luftdruck:', value: press ? `${press.value} ${press.unit || 'Pa'}` : 'n.v.' },
+            { label: 'Luftdruck:', value: press ? `${press.value} ${press.unit || 'hPa'}` : 'n.v.' },
             { label: 'Dosisleistung:', value: dosis ? `${dosis.value} ${dosis.unit || 'uSv/h'}` : 'n.v.' },
             { label: 'Haustuer:', value: formatLockState(tuerStatus) }
         ];

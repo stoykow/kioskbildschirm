@@ -61,7 +61,7 @@ $stmt = $pdo->prepare(
      JOIN haltestellen h ON h.id = a.haltestelle_id
      JOIN linien l ON l.id = a.linie_id
      WHERE h.name = :stop_name
-       AND a.geplante_zeit >= (NOW() - INTERVAL 2 HOUR)
+       AND COALESCE(a.tatsaechliche_zeit, a.geplante_zeit) >= NOW()
      ORDER BY a.geplante_zeit ASC
      LIMIT :limit"
 );

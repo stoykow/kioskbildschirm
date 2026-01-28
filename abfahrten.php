@@ -37,15 +37,15 @@ $stopName = null;
 $modeCondition = '1=1';
 switch ($type) {
     case 'zug':
-        $stopName = 'GÃ¶rlitz Hbf';
+        $stopName = 'Görlitz Hbf';
         $modeCondition = "(l.modus = 'train' OR l.produkt IN ('regional','regionalExp','interregional','national','nationalExpress','suburban')) AND (l.produkt IS NULL OR l.produkt NOT IN ('tram','bus'))";
         break;
     case 'tram':
-        $stopName = 'LutherstraÃŸe';
+        $stopName = 'Lutherstraße';
         $modeCondition = "l.modus = 'tram'";
         break;
     case 'bus':
-        $stopName = 'MelanchthonstraÃŸe';
+        $stopName = 'Melanchthonstraße';
         $modeCondition = "l.modus = 'bus'";
         break;
     default:

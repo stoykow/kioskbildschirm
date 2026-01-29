@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS benutzer (
   CONSTRAINT fk_benutzer_gruppe FOREIGN KEY (gruppen_id) REFERENCES benutzer_gruppen(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS abfall_termine (
+CREATE TABLE IF NOT EXISTS termine_abfall (
   id INT AUTO_INCREMENT PRIMARY KEY,
   uid VARCHAR(128) NOT NULL UNIQUE,
   datum DATE NOT NULL,
@@ -80,19 +80,39 @@ CREATE TABLE IF NOT EXISTS abfall_termine (
   erstellt_am TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   aktualisiert_am TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_abfall_datum (datum),
-  CONSTRAINT fk_abfall_termine_benutzer FOREIGN KEY (erledigt_von) REFERENCES benutzer(id),
-  CONSTRAINT fk_abfall_termine_gruppe FOREIGN KEY (zustaendig_gruppe_id) REFERENCES benutzer_gruppen(id)
+  CONSTRAINT fk_termine_abfall_benutzer FOREIGN KEY (erledigt_von) REFERENCES benutzer(id),
+  CONSTRAINT fk_termine_abfall_gruppe FOREIGN KEY (zustaendig_gruppe_id) REFERENCES benutzer_gruppen(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS abfall_erledigt (
+CREATE TABLE IF NOT EXISTS termine_abfall_erledigt (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   termin_id INT NOT NULL,
   benutzer_id INT NOT NULL,
   erledigt_am TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uniq_termin_benutzer (termin_id, benutzer_id),
   INDEX idx_termin_zeit (termin_id, erledigt_am),
-  CONSTRAINT fk_abfall_erledigt_termin FOREIGN KEY (termin_id) REFERENCES abfall_termine(id),
-  CONSTRAINT fk_abfall_erledigt_benutzer FOREIGN KEY (benutzer_id) REFERENCES benutzer(id)
+  CONSTRAINT fk_termine_abfall_erledigt_termin FOREIGN KEY (termin_id) REFERENCES termine_abfall(id),
+  CONSTRAINT fk_termine_abfall_erledigt_benutzer FOREIGN KEY (benutzer_id) REFERENCES benutzer(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS termine_sonstige (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  datum DATE NOT NULL,
+  titel VARCHAR(255) NOT NULL,
+  hinweis TEXT NULL,
+  start_time TIME NULL,
+  end_time TIME NULL,
+  zustaendig_gruppe_id INT NULL,
+  erledigt_von INT NULL,
+  erledigt_am TIMESTAMP NULL,
+  quelle_typ VARCHAR(32) NULL,
+  quelle_datum DATE NULL,
+  erstellt_am TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  aktualisiert_am TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_sonst_quelle (quelle_typ, quelle_datum, titel),
+  INDEX idx_sonst_datum (datum),
+  CONSTRAINT fk_termine_sonstige_benutzer FOREIGN KEY (erledigt_von) REFERENCES benutzer(id),
+  CONSTRAINT fk_termine_sonstige_gruppe FOREIGN KEY (zustaendig_gruppe_id) REFERENCES benutzer_gruppen(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS aufgaben (
@@ -191,3 +211,4 @@ INSERT INTO aufgaben (titel, details, gruppe_id)
 SELECT 'Hausflur reinigen', 'Staubsaugen + wischen',
   (SELECT id FROM benutzer_gruppen WHERE name = 'Daniel & Niko' LIMIT 1)
 WHERE NOT EXISTS (SELECT 1 FROM aufgaben WHERE titel = 'Hausflur reinigen');
+

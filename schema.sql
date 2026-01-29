@@ -142,6 +142,20 @@ CREATE TABLE IF NOT EXISTS wetter_daten (
   INDEX idx_wetter_zeit (zeit)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS wetter_forecast (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  forecast_time_utc DATETIME NOT NULL,
+  temperatur_c DECIMAL(5,2) NULL,
+  wind_ms DECIMAL(5,2) NULL,
+  regen_3h_mm DECIMAL(6,2) NULL,
+  schnee_3h_mm DECIMAL(6,2) NULL,
+  wetter_main VARCHAR(64) NULL,
+  wetter_beschreibung VARCHAR(128) NULL,
+  payload_json LONGTEXT NOT NULL,
+  UNIQUE KEY uniq_forecast_time (forecast_time_utc),
+  INDEX idx_forecast_time (forecast_time_utc)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Beispiel-Daten (optional)
 INSERT INTO benutzer_gruppen (name) VALUES
   ('Daniel & Niko'),

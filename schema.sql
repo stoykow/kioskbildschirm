@@ -124,6 +124,24 @@ CREATE TABLE IF NOT EXISTS aufgaben_erledigt (
   CONSTRAINT fk_aufgaben_erledigt_benutzer FOREIGN KEY (benutzer_id) REFERENCES benutzer(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS wetter_daten (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  zeit TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  temperatur_c DECIMAL(5,2) NULL,
+  gefuehlt_c DECIMAL(5,2) NULL,
+  luftdruck_hpa INT NULL,
+  luftfeuchte_prozent INT NULL,
+  wind_ms DECIMAL(5,2) NULL,
+  wind_boeen_ms DECIMAL(5,2) NULL,
+  wolken_prozent INT NULL,
+  regen_1h_mm DECIMAL(6,2) NULL,
+  schnee_1h_mm DECIMAL(6,2) NULL,
+  wetter_main VARCHAR(64) NULL,
+  wetter_beschreibung VARCHAR(128) NULL,
+  payload_json LONGTEXT NOT NULL,
+  INDEX idx_wetter_zeit (zeit)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Beispiel-Daten (optional)
 INSERT INTO benutzer_gruppen (name) VALUES
   ('Daniel & Niko'),

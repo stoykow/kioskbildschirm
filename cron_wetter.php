@@ -1,16 +1,9 @@
-﻿<?php
+<?php
 // Cron: Wetterdaten (OpenWeather) laden und in DB speichern
 
 header('Content-Type: text/plain; charset=utf-8');
 
-// OpenWeather Config
-$apiKey = 'OPENWEATHER_API_KEY_PLACEHOLDER';
-$lat = '51.1508';
-$lon = '14.9684';
-$lang = 'de';
-$units = 'metric';
-
-$url = "https://api.openweathermap.org/data/2.5/weather?lat={$lat}&lon={$lon}&appid={$apiKey}&lang={$lang}&units={$units}";
+require_once __DIR__ . '/config.php';
 
 $dbHost = getenv('DB_HOST') ?: 'localhost';
 $dbName = getenv('DB_NAME') ?: '';
@@ -55,6 +48,21 @@ try {
     echo "DB connect failed.\n";
     exit;
 }
+
+$appConfig = app_config_get($pdo);
+$apiKey = $appConfig['openweather_api_key'] ?? '';
+$lat = $appConfig['openweather_lat'] ?? '51.1508';
+$lon = $appConfig['openweather_lon'] ?? '14.9684';
+$lang = $appConfig['openweather_lang'] ?? 'de';
+$units = $appConfig['openweather_units'] ?? 'metric';
+
+if ($apiKey === '') {
+    http_response_code(500);
+    echo "OPENWEATHER_API missing.\n";
+    exit;
+}
+
+$url = "https://api.openweathermap.org/data/2.5/weather?lat={$lat}&lon={$lon}&appid={$apiKey}&lang={$lang}&units={$units}";
 
 $main = $data['main'] ?? [];
 $wind = $data['wind'] ?? [];
@@ -118,10 +126,19 @@ if ($forecastJson !== false) {
     if (is_array($forecast) && is_array($forecast['list'] ?? null)) {
         $tzOffset = (int)($forecast['city']['timezone'] ?? 0); // Sekunden
         $nowTs = time();
-        $maxLead = 36 * 3600;
+        $leadHours = (int)($appConfig['snow_task_lead_hours'] ?? 36);
+        if ($leadHours <= 0) {
+            $leadHours = 36;
+        }
+        $maxLead = $leadHours * 3600;
         $snowDueDate = null;
         $snowLocalTs = null;
         $snowAmount = null;
+        $minSnow = (float)($appConfig['snow_task_min_mm'] ?? 0);
+        $eveningHour = (int)($appConfig['snow_task_evening_hour'] ?? 18);
+        if ($eveningHour < 0 || $eveningHour > 23) {
+            $eveningHour = 18;
+        }
 
         foreach ($forecast['list'] as $item) {
             $dt = $item['dt'] ?? null;
@@ -146,7 +163,7 @@ if ($forecastJson !== false) {
             } elseif (isset($item['snow']['1h'])) {
                 $snow = (float)$item['snow']['1h'];
             }
-            if ($snow <= 0) {
+            if ($snow <= $minSnow) {
                 continue;
             }
             $localTs = $dt + $tzOffset;
@@ -154,7 +171,7 @@ if ($forecastJson !== false) {
             $snowLocalTs = $localTs;
             $snowAmount = $snow;
             $dueDate = gmdate('Y-m-d', $localTs);
-            if ($hour >= 18) {
+            if ($hour >= $eveningHour) {
                 $dueDate = gmdate('Y-m-d', $localTs + 86400);
             }
             $snowDueDate = $dueDate;

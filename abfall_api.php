@@ -3,32 +3,28 @@
 
 header('Content-Type: application/json; charset=utf-8');
 
-$dbHost = getenv('DB_HOST') ?: 'localhost';
-$dbName = getenv('DB_NAME') ?: '';
-$dbUser = getenv('DB_USER') ?: '';
-$dbPass = getenv('DB_PASS') ?: '';
-
-if ($dbName === '' || $dbUser === '') {
-    http_response_code(500);
-    echo json_encode(['error' => 'DB env vars missing (DB_NAME/DB_USER)']);
-    exit;
-}
+require_once __DIR__ . '/config.php';
 
 try {
-    $pdo = new PDO(
-        "mysql:host={$dbHost};dbname={$dbName};charset=utf8mb4",
-        $dbUser,
-        $dbPass,
-        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]
-    );
+    $pdo = db_connect();
+} catch (RuntimeException $e) {
+    http_response_code(500);
+    echo json_encode(['error' => $e->getMessage()]);
+    exit;
 } catch (PDOException $e) {
     http_response_code(500);
     echo json_encode(['error' => 'DB connect failed']);
     exit;
 }
 
+$appConfig = app_config_get($pdo);
+$days = (int)($appConfig['termine_abfall_days'] ?? 14);
+if ($days <= 0) {
+    $days = 14;
+}
+
 $today = (new DateTimeImmutable('today'))->format('Y-m-d');
-$in14 = (new DateTimeImmutable('today'))->modify('+14 days')->format('Y-m-d');
+$in14 = (new DateTimeImmutable('today'))->modify('+' . $days . ' days')->format('Y-m-d');
 
 $stmt = $pdo->prepare(
     "SELECT

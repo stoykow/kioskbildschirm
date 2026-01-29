@@ -84,6 +84,17 @@ CREATE TABLE IF NOT EXISTS abfall_termine (
   CONSTRAINT fk_abfall_termine_gruppe FOREIGN KEY (zustaendig_gruppe_id) REFERENCES benutzer_gruppen(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS abfall_erledigt (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  termin_id INT NOT NULL,
+  benutzer_id INT NOT NULL,
+  erledigt_am TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_termin_benutzer (termin_id, benutzer_id),
+  INDEX idx_termin_zeit (termin_id, erledigt_am),
+  CONSTRAINT fk_abfall_erledigt_termin FOREIGN KEY (termin_id) REFERENCES abfall_termine(id),
+  CONSTRAINT fk_abfall_erledigt_benutzer FOREIGN KEY (benutzer_id) REFERENCES benutzer(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS aufgaben (
   id INT AUTO_INCREMENT PRIMARY KEY,
   titel VARCHAR(255) NOT NULL,

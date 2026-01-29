@@ -23,6 +23,7 @@ function initKiosk() {
     updateTime();
     fetchWeather();
     fetchWaste();
+    fetchTasks();
     fetchTrains();
     fetchTrams();
     fetchBus();
@@ -32,6 +33,7 @@ function initKiosk() {
     setInterval(fetchTrams, 300000); // Aktualisiere die Tramdaten alle 5 Minuten
     setInterval(fetchBus, 300000); // Aktualisiere die Busdaten alle 5 Minuten
     setInterval(fetchWaste, 300000); // Aktualisiere die Abfallkalender alle 5 Minuten
+    setInterval(fetchTasks, 300000); // Aktualisiere die Aufgaben alle 5 Minuten
     setInterval(() => location.reload(), 1200000); // kompletter Reload alle 20 Minuten
 }
 

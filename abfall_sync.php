@@ -64,6 +64,16 @@ $upsert = $pdo->prepare(
        end_time = VALUES(end_time)"
 );
 
+$taskUpsert = $pdo->prepare(
+    "INSERT INTO aufgaben (titel, details, faellig_am, gruppe_id, quelle_typ, quelle_datum)
+     VALUES (:titel, :details, :faellig_am, :gruppe_id, :quelle_typ, :quelle_datum)
+     ON DUPLICATE KEY UPDATE
+       titel = VALUES(titel),
+       details = VALUES(details),
+       faellig_am = VALUES(faellig_am),
+       gruppe_id = VALUES(gruppe_id)"
+);
+
 $inserted = 0;
 $skipped = 0;
 
@@ -131,6 +141,18 @@ try {
             ':start_time' => $event['start'] ?? null,
             ':end_time' => $event['end'] ?? null,
         ]);
+
+        $summaryLower = mb_strtolower($event['summary']);
+        if (str_starts_with($summaryLower, 'rest')) {
+            $taskUpsert->execute([
+                ':titel' => 'Restmuell rausstellen',
+                ':details' => 'Bitte Restmuell rechtzeitig bereitstellen',
+                ':faellig_am' => $event['date'],
+                ':gruppe_id' => null,
+                ':quelle_typ' => 'restmuell',
+                ':quelle_datum' => $event['date'],
+            ]);
+        }
         $inserted++;
     }
 

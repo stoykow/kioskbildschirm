@@ -49,13 +49,22 @@ CREATE TABLE IF NOT EXISTS geraete_daten (
   CONSTRAINT fk_geraete_daten_geraete FOREIGN KEY (geraet_id) REFERENCES geraete(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Abfallkalender: Benutzer und Termine (mit Erledigt-Markierung)
+-- Abfallkalender: Benutzer, Gruppen und Termine (mit Erledigt-Markierung)
 
-CREATE TABLE IF NOT EXISTS benutzer (
+CREATE TABLE IF NOT EXISTS benutzer_gruppen (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(64) NOT NULL UNIQUE,
   aktiv TINYINT(1) NOT NULL DEFAULT 1,
   erstellt_am TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS benutzer (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(64) NOT NULL UNIQUE,
+  gruppen_id INT NULL,
+  aktiv TINYINT(1) NOT NULL DEFAULT 1,
+  erstellt_am TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_benutzer_gruppe FOREIGN KEY (gruppen_id) REFERENCES benutzer_gruppen(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS abfall_termine (
@@ -78,10 +87,51 @@ CREATE TABLE IF NOT EXISTS aufgaben (
   titel VARCHAR(255) NOT NULL,
   details TEXT NULL,
   faellig_am DATE NULL,
+  gruppe_id INT NULL,
+  quelle_typ VARCHAR(32) NULL,
+  quelle_datum DATE NULL,
   erledigt_von INT NULL,
   erledigt_am TIMESTAMP NULL,
   erstellt_am TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   aktualisiert_am TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_aufgaben_faellig (faellig_am),
-  CONSTRAINT fk_aufgaben_benutzer FOREIGN KEY (erledigt_von) REFERENCES benutzer(id)
+  UNIQUE KEY uniq_aufgaben_quelle (quelle_typ, quelle_datum),
+  CONSTRAINT fk_aufgaben_benutzer FOREIGN KEY (erledigt_von) REFERENCES benutzer(id),
+  CONSTRAINT fk_aufgaben_gruppe FOREIGN KEY (gruppe_id) REFERENCES benutzer_gruppen(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Beispiel-Daten (optional)
+INSERT INTO benutzer_gruppen (name) VALUES
+  ('Daniel & Niko'),
+  ('Nadia & Dimitar'),
+  ('Elena & David')
+ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+INSERT INTO benutzer (name, gruppen_id)
+SELECT 'Daniel', (SELECT id FROM benutzer_gruppen WHERE name = 'Daniel & Niko' LIMIT 1)
+WHERE NOT EXISTS (SELECT 1 FROM benutzer WHERE name = 'Daniel');
+
+INSERT INTO benutzer (name, gruppen_id)
+SELECT 'Niko', (SELECT id FROM benutzer_gruppen WHERE name = 'Daniel & Niko' LIMIT 1)
+WHERE NOT EXISTS (SELECT 1 FROM benutzer WHERE name = 'Niko');
+
+INSERT INTO benutzer (name, gruppen_id)
+SELECT 'Nadia', (SELECT id FROM benutzer_gruppen WHERE name = 'Nadia & Dimitar' LIMIT 1)
+WHERE NOT EXISTS (SELECT 1 FROM benutzer WHERE name = 'Nadia');
+
+INSERT INTO benutzer (name, gruppen_id)
+SELECT 'Dimitar', (SELECT id FROM benutzer_gruppen WHERE name = 'Nadia & Dimitar' LIMIT 1)
+WHERE NOT EXISTS (SELECT 1 FROM benutzer WHERE name = 'Dimitar');
+
+INSERT INTO benutzer (name, gruppen_id)
+SELECT 'Elena', (SELECT id FROM benutzer_gruppen WHERE name = 'Elena & David' LIMIT 1)
+WHERE NOT EXISTS (SELECT 1 FROM benutzer WHERE name = 'Elena');
+
+INSERT INTO benutzer (name, gruppen_id)
+SELECT 'David', (SELECT id FROM benutzer_gruppen WHERE name = 'Elena & David' LIMIT 1)
+WHERE NOT EXISTS (SELECT 1 FROM benutzer WHERE name = 'David');
+
+INSERT INTO aufgaben (titel, details, gruppe_id)
+SELECT 'Hausflur reinigen', 'Staubsaugen + wischen',
+  (SELECT id FROM benutzer_gruppen WHERE name = 'Daniel & Niko' LIMIT 1)
+WHERE NOT EXISTS (SELECT 1 FROM aufgaben WHERE titel = 'Hausflur reinigen');

@@ -13,7 +13,6 @@ header("Expires: 0");
     <link rel="stylesheet" href="kiosk.css">
 </head>
 <body>
-    TEST
     <div id="date-time"></div>
     
     <div id="main-flex">

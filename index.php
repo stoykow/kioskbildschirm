@@ -13,8 +13,6 @@ header("Expires: 0");
     <link rel="stylesheet" href="kiosk.css">
 </head>
 <body>
-    <div id="date-time"></div>
-    
     <div id="main-flex">
         <div id="links">
             <div id="weather">Lädt Wetterdaten...</div>

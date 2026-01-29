@@ -62,7 +62,7 @@ $clouds = $data['clouds'] ?? [];
 $weather0 = is_array($data['weather'] ?? null) && count($data['weather']) > 0 ? $data['weather'][0] : [];
 
 $insert = $pdo->prepare(
-    "INSERT INTO wetter_daten
+    "INSERT INTO wetter_weather
      (temperatur_c, gefuehlt_c, luftdruck_hpa, luftfeuchte_prozent, wind_ms, wind_boeen_ms, wolken_prozent,
       regen_1h_mm, schnee_1h_mm, wetter_main, wetter_beschreibung, payload_json)
      VALUES
@@ -151,9 +151,6 @@ if ($forecastJson !== false) {
             }
             $localTs = $dt + $tzOffset;
             $hour = (int)gmdate('G', $localTs);
-            if (!($hour >= 18 || $hour < 6)) {
-                continue;
-            }
             $snowLocalTs = $localTs;
             $snowAmount = $snow;
             $dueDate = gmdate('Y-m-d', $localTs);

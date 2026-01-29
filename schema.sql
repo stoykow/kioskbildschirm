@@ -124,7 +124,7 @@ CREATE TABLE IF NOT EXISTS aufgaben_erledigt (
   CONSTRAINT fk_aufgaben_erledigt_benutzer FOREIGN KEY (benutzer_id) REFERENCES benutzer(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS wetter_daten (
+CREATE TABLE IF NOT EXISTS wetter_weather (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   zeit TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   temperatur_c DECIMAL(5,2) NULL,

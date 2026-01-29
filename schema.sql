@@ -108,6 +108,7 @@ CREATE TABLE IF NOT EXISTS termine_sonstige (
   hinweis TEXT NULL,
   start_time TIME NULL,
   end_time TIME NULL,
+  requires_home TINYINT(1) NOT NULL DEFAULT 0,
   quelle_typ VARCHAR(32) NULL,
   quelle_datum DATE NULL,
   erstellt_am TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -34,6 +34,7 @@ $stmt = $pdo->prepare(
         t.hinweis,
         t.start_time,
         t.end_time,
+        t.requires_home,
         GROUP_CONCAT(b.name ORDER BY b.name SEPARATOR ', ') AS zuhause_namen,
         GROUP_CONCAT(b.id ORDER BY b.name SEPARATOR ',') AS zuhause_ids
      FROM termine_sonstige t
@@ -57,6 +58,7 @@ foreach ($stmt->fetchAll() as $row) {
         'hint' => $row['hinweis'],
         'start' => $row['start_time'] ? substr($row['start_time'], 0, 5) : null,
         'end' => $row['end_time'] ? substr($row['end_time'], 0, 5) : null,
+        'requires_home' => (int)($row['requires_home'] ?? 0) === 1,
         'zuhause_by' => $row['zuhause_namen'],
         'zuhause_ids' => $ids,
     ];

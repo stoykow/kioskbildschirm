@@ -23,16 +23,16 @@ function sanitizeUnit(unit) {
 
 function formatLockState(state) {
     if (!state) {
-        return 'n.v.';
+        return { label: 'n.v.', className: '' };
     }
     const s = String(state).toLowerCase();
     if (s === 'locked' || s === 'on' || s === 'true') {
-        return 'verschlossen';
+        return { label: 'zugeschlossen', className: 'weather-status-closed' };
     }
     if (s === 'unlocked' || s === 'off' || s === 'false') {
-        return 'offen';
+        return { label: 'aufgeschlossen', className: 'weather-status-open' };
     }
-    return state;
+    return { label: state, className: '' };
 }
 
 async function fetchHaGeraet(geraet) {
@@ -81,23 +81,24 @@ async function fetchWeather() {
         const press = formatPressure(pickValue(geiger, GEIGER_LUFTDRUCK));
         const dosis = pickValue(geiger, GEIGER_DOSIS);
         const tuerStatus = tuer && tuer[TUER_STATUS] ? tuer[TUER_STATUS].state : null;
+        const tuerInfo = formatLockState(tuerStatus);
 
-        const rows = [
-            { label: 'Temperatur:', value: temp ? `${temp.value} ${temp.unit || 'C'}` : 'n.v.' },
-            { label: 'Luftfeuchte:', value: hum ? `${hum.value} ${hum.unit || '%'}` : 'n.v.' },
-            { label: 'Luftdruck:', value: press ? `${press.value} ${press.unit || 'hPa'}` : 'n.v.' },
-            { label: 'Dosisleistung:', value: dosis ? `${dosis.value} ${dosis.unit || 'uSv/h'}` : 'n.v.' },
-            { label: 'Haustuer:', value: formatLockState(tuerStatus) }
-        ];
+        const tempText = temp ? `${temp.value} ${temp.unit || 'C'}` : 'n.v.';
+        const humText = hum ? `${hum.value} ${hum.unit || '%'}` : 'n.v.';
+        const pressText = press ? `${press.value} ${press.unit || 'hPa'}` : 'n.v.';
+        const dosisText = dosis ? `${dosis.value} ${dosis.unit || 'uSv/h'}` : 'n.v.';
 
         document.getElementById('weather').innerHTML =
             `<div class="weather-title">Umwelt / Status</div>` +
-            rows.map(row =>
-                `<div class="weather-row">
-                    <span class="weather-label">${row.label}</span>
-                    <span class="weather-value">${row.value}</span>
-                </div>`
-            ).join('');
+            `<div class="weather-row">
+                <span class="weather-label">Temp / Feuchte:</span>
+                <span class="weather-value">${tempText} / ${humText}</span>
+            </div>` +
+            `<div class="weather-row">
+                <span class="weather-label">Druck / Dosis:</span>
+                <span class="weather-value">${pressText} / ${dosisText}</span>
+                <span class="weather-value weather-status ${tuerInfo.className}">Haustür: ${tuerInfo.label}</span>
+            </div>`;
     } catch (error) {
         document.getElementById('weather').textContent = 'Fehler beim Laden der HA-Daten';
         console.error('Fehler beim Laden der HA-Daten:', error);

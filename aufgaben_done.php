@@ -23,11 +23,26 @@ if (!is_array($data)) {
 }
 
 $taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
+$userIds = $data['user_ids'] ?? null;
 $userId = isset($data['user_id']) ? (int)$data['user_id'] : 0;
 
-if ($taskId <= 0 || $userId <= 0) {
+if ($taskId <= 0) {
     http_response_code(400);
-    echo json_encode(['error' => 'task_id und user_id erforderlich']);
+    echo json_encode(['error' => 'task_id erforderlich']);
+    exit;
+}
+
+if (is_array($userIds)) {
+    $userIds = array_values(array_filter(array_map('intval', $userIds), fn($v) => $v > 0));
+} elseif ($userId > 0) {
+    $userIds = [$userId];
+} else {
+    $userIds = [];
+}
+
+if (count($userIds) === 0) {
+    http_response_code(400);
+    echo json_encode(['error' => 'user_id(s) erforderlich']);
     exit;
 }
 
@@ -47,12 +62,18 @@ try {
 try {
     $pdo->beginTransaction();
 
+    $validUsers = [];
     $checkUser = $pdo->prepare("SELECT id FROM benutzer WHERE id = :id AND aktiv = 1 LIMIT 1");
-    $checkUser->execute([':id' => $userId]);
-    if (!$checkUser->fetch()) {
+    foreach ($userIds as $uid) {
+        $checkUser->execute([':id' => $uid]);
+        if ($checkUser->fetch()) {
+            $validUsers[] = $uid;
+        }
+    }
+    if (count($validUsers) === 0) {
         $pdo->rollBack();
         http_response_code(400);
-        echo json_encode(['error' => 'Unbekannter Benutzer']);
+        echo json_encode(['error' => 'Unbekannte Benutzer']);
         exit;
     }
 
@@ -65,12 +86,21 @@ try {
         exit;
     }
 
+    $ins = $pdo->prepare(
+        "INSERT INTO aufgaben_erledigt (aufgabe_id, benutzer_id)
+         VALUES (:task_id, :user_id)
+         ON DUPLICATE KEY UPDATE erledigt_am = VALUES(erledigt_am)"
+    );
+    foreach ($validUsers as $uid) {
+        $ins->execute([':task_id' => $taskId, ':user_id' => $uid]);
+    }
+
     $upd = $pdo->prepare(
         "UPDATE aufgaben
-         SET erledigt_von = :user_id, erledigt_am = NOW()
+         SET erledigt_am = NOW()
          WHERE id = :task_id"
     );
-    $upd->execute([':user_id' => $userId, ':task_id' => $taskId]);
+    $upd->execute([':task_id' => $taskId]);
 
     $pdo->commit();
     echo json_encode(['ok' => true]);

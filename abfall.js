@@ -114,15 +114,19 @@ function buildTasksSection(entries, interactive) {
     const rows = entries.map(task => {
         const rowClasses = ['task-row'];
         if (interactive) rowClasses.push('task-clickable');
+        if (task.done_by) rowClasses.push('task-row-done');
         const dataAttr = interactive ? `data-task-id="${task.id}"` : '';
         const dueText = task.due ? getLabel(task.due) : 'Ohne Datum';
         const titleText = escapeHtml(decodeHtmlEntities(task.title));
         const groupName = task.group ? decodeHtmlEntities(task.group) : 'offen';
         const groupText = `Zuständig: ${groupName}`;
+        const doneText = task.done_by ? `Erledigt: ${decodeHtmlEntities(task.done_by)}` : 'Unerledigt';
+        const statusClass = task.done_by ? 'task-status task-status-done' : 'task-status task-status-open';
         return `
             <div class="${rowClasses.join(' ')}" ${dataAttr}>
                 <span class="task-name">${titleText}</span>
                 <span class="task-meta">${escapeHtml(dueText)} - ${escapeHtml(groupText)}</span>
+                <span class="${statusClass}">${escapeHtml(doneText)}</span>
             </div>
         `;
     }).join('');
@@ -319,6 +323,7 @@ function ensureTaskModal() {
             <div class="task-modal-sub"></div>
             <div class="task-user-list"></div>
             <div class="task-modal-actions">
+                <button class="task-modal-confirm">OK</button>
                 <button class="task-modal-cancel">Abbrechen</button>
             </div>
         </div>
@@ -330,6 +335,17 @@ function ensureTaskModal() {
     });
     document.body.appendChild(modal);
     modal.querySelector('.task-modal-cancel').addEventListener('click', closeTaskModal);
+    modal.querySelector('.task-modal-confirm').addEventListener('click', () => {
+        const taskId = parseInt(modal.getAttribute('data-task-id') || '0', 10);
+        if (taskId > 0) {
+            const selected = Array.from(modal.querySelectorAll('.task-user-button.is-selected'))
+                .map(btn => parseInt(btn.getAttribute('data-user-id') || '0', 10))
+                .filter(id => id > 0);
+            if (selected.length > 0) {
+                markTaskDone(taskId, selected);
+            }
+        }
+    });
     taskModalReady = true;
 }
 
@@ -345,8 +361,10 @@ function openTaskModal(taskId) {
 
     title.textContent = taskItem.title;
     const dueText = taskItem.due ? getLabel(taskItem.due) : 'Ohne Datum';
-    const groupText = taskItem.group ? `Zustaendig: ${taskItem.group}` : 'Zustaendig: offen';
-    sub.textContent = `${dueText} - ${groupText}`;
+    const groupText = taskItem.group ? `Zustaendig: ${decodeHtmlEntities(taskItem.group)}` : 'Zustaendig: offen';
+    const doneText = taskItem.done_by ? `Erledigt: ${decodeHtmlEntities(taskItem.done_by)}` : 'Unerledigt';
+    sub.textContent = `${dueText} - ${groupText} - ${doneText}`;
+    modal.setAttribute('data-task-id', String(taskItem.id));
 
     list.innerHTML = '<div class="task-loading">Benutzer werden geladen...</div>';
     modal.classList.add('is-open');
@@ -362,7 +380,10 @@ function openTaskModal(taskId) {
                 const btn = document.createElement('button');
                 btn.className = 'task-user-button';
                 btn.textContent = user.name;
-                btn.addEventListener('click', () => markTaskDone(taskItem.id, user));
+                btn.setAttribute('data-user-id', String(user.id));
+                btn.addEventListener('click', () => {
+                    btn.classList.toggle('is-selected');
+                });
                 list.appendChild(btn);
             });
         })
@@ -374,22 +395,30 @@ function openTaskModal(taskId) {
 function closeTaskModal() {
     const modal = document.getElementById('task-modal');
     if (modal) {
+        modal.removeAttribute('data-task-id');
         modal.classList.remove('is-open');
     }
 }
 
-function markTaskDone(taskId, user) {
+function markTaskDone(taskId, userIds) {
     fetch('aufgaben_done.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task_id: taskId, user_id: user.id })
+        body: JSON.stringify({ task_id: taskId, user_ids: userIds })
     })
         .then(response => response.json())
         .then(data => {
             if (!data || !data.ok) {
                 throw new Error('Mark task done failed');
             }
-            tasksCache = tasksCache.filter(t => t.id !== taskId);
+            const namesById = new Map((wasteUsersCache || []).map(u => [u.id, u.name]));
+            tasksCache = tasksCache.map(t => {
+                if (t.id !== taskId) return t;
+                const existing = (t.done_by ? String(t.done_by).split(',').map(s => s.trim()) : []);
+                const added = userIds.map(id => namesById.get(id)).filter(Boolean);
+                const merged = Array.from(new Set([...existing, ...added]));
+                return { ...t, done_by: merged.join(', '), done_at: new Date().toISOString() };
+            });
             renderCombined();
             closeTaskModal();
         })

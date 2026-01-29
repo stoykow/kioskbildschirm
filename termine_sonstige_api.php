@@ -28,7 +28,7 @@ try {
 }
 
 $today = (new DateTimeImmutable('today'))->format('Y-m-d');
-$in14 = (new DateTimeImmutable('today'))->modify('+14 days')->format('Y-m-d');
+$in14 = (new DateTimeImmutable('today'))->modify('+16 days')->format('Y-m-d');
 
 $stmt = $pdo->prepare(
     "SELECT

@@ -21,13 +21,6 @@ body {
     overflow-x: hidden;
 }
 
-#date-time {
-    margin-bottom: 1rem;
-    font-size: clamp(22px, 3.6vw + 0.6vh, 64px);
-    letter-spacing: 0.08em;
-    font-weight: 600;
-    text-align: center;
-}
 
 #links,
 #rechts {
@@ -655,9 +648,6 @@ body {
         max-width: 100%;
     }
 
-    #date-time {
-        font-size: clamp(20px, 4.5vw, 48px);
-    }
 }
 
 @media (max-width: 1920px) {
@@ -677,10 +667,6 @@ body {
 @media (max-width: 768px) {
     body {
         padding: 1rem;
-    }
-    
-    #date-time {
-        margin-bottom: 0.8rem;
     }
     
     #links, #rechts {
@@ -730,10 +716,6 @@ body {
 @media (max-width: 480px) {
     body {
         padding: 0.5rem;
-    }
-    
-    #date-time {
-        font-size: clamp(18px, 6vw, 30px);
     }
     
     #links, #rechts {

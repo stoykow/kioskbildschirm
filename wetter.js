@@ -42,7 +42,8 @@ function formatNowDateTime() {
         month: '2-digit',
         year: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
+        second: '2-digit'
     });
 }
 
@@ -101,8 +102,9 @@ async function fetchWeather() {
         const dosisText = dosis ? `${dosis.value} ${dosis.unit || 'uSv/h'}` : 'n.v.';
 
         document.getElementById('weather').innerHTML =
+            `<div class="weather-title">Umwelt / Status</div>` +
             `<div class="weather-row">
-                <span class="weather-label">Status:</span>
+                <span class="weather-label">Datum/Uhrzeit:</span>
                 <span class="weather-value">
                     <span class="weather-status-time">${statusTime}</span>
                 </span>

@@ -66,8 +66,23 @@ $insert = $pdo->prepare(
      (temperatur_c, gefuehlt_c, luftdruck_hpa, luftfeuchte_prozent, wind_ms, wind_boeen_ms, wolken_prozent,
       regen_1h_mm, schnee_1h_mm, wetter_main, wetter_beschreibung, payload_json)
      VALUES
-     (:temperatur_c, :gefuehlt_c, :luftdruck_hpa, :luftfeuchte_prozent, :wind_ms, :wind_boeen_ms, :wolken_prozent,
-      :regen_1h_mm, :schnee_1h_mm, :wetter_main, :wetter_beschreibung, :payload_json)"
+      (:temperatur_c, :gefuehlt_c, :luftdruck_hpa, :luftfeuchte_prozent, :wind_ms, :wind_boeen_ms, :wolken_prozent,
+       :regen_1h_mm, :schnee_1h_mm, :wetter_main, :wetter_beschreibung, :payload_json)"
+);
+
+$forecastUpsert = $pdo->prepare(
+    "INSERT INTO wetter_forecast
+     (forecast_time_utc, temperatur_c, wind_ms, regen_3h_mm, schnee_3h_mm, wetter_main, wetter_beschreibung, payload_json)
+     VALUES
+     (:forecast_time_utc, :temperatur_c, :wind_ms, :regen_3h_mm, :schnee_3h_mm, :wetter_main, :wetter_beschreibung, :payload_json)
+     ON DUPLICATE KEY UPDATE
+       temperatur_c = VALUES(temperatur_c),
+       wind_ms = VALUES(wind_ms),
+       regen_3h_mm = VALUES(regen_3h_mm),
+       schnee_3h_mm = VALUES(schnee_3h_mm),
+       wetter_main = VALUES(wetter_main),
+       wetter_beschreibung = VALUES(wetter_beschreibung),
+       payload_json = VALUES(payload_json)"
 );
 
 $taskUpsert = $pdo->prepare(
@@ -95,7 +110,7 @@ $insert->execute([
     ':payload_json' => $json,
 ]);
 
-// Forecast: pruefen, ob in der kommenden Nacht Schnee faellt (naechste 36h)
+// Forecast: speichern + pruefen, ob in der kommenden Nacht Schnee faellt (naechste 36h)
 $forecastUrl = "https://api.openweathermap.org/data/2.5/forecast?lat={$lat}&lon={$lon}&appid={$apiKey}&lang={$lang}&units={$units}";
 $forecastJson = @file_get_contents($forecastUrl, false, $context);
 if ($forecastJson !== false) {
@@ -106,9 +121,22 @@ if ($forecastJson !== false) {
         $maxLead = 36 * 3600;
         $snowDueDate = null;
         $snowLocalTs = null;
+        $snowAmount = null;
 
         foreach ($forecast['list'] as $item) {
             $dt = $item['dt'] ?? null;
+            if ($dt) {
+                $forecastUpsert->execute([
+                    ':forecast_time_utc' => gmdate('Y-m-d H:i:s', $dt),
+                    ':temperatur_c' => $item['main']['temp'] ?? null,
+                    ':wind_ms' => $item['wind']['speed'] ?? null,
+                    ':regen_3h_mm' => $item['rain']['3h'] ?? null,
+                    ':schnee_3h_mm' => $item['snow']['3h'] ?? null,
+                    ':wetter_main' => $item['weather'][0]['main'] ?? null,
+                    ':wetter_beschreibung' => $item['weather'][0]['description'] ?? null,
+                    ':payload_json' => json_encode($item, JSON_UNESCAPED_UNICODE),
+                ]);
+            }
             if (!$dt || $dt < $nowTs || ($dt - $nowTs) > $maxLead) {
                 continue;
             }
@@ -127,6 +155,7 @@ if ($forecastJson !== false) {
                 continue;
             }
             $snowLocalTs = $localTs;
+            $snowAmount = $snow;
             $dueDate = gmdate('Y-m-d', $localTs);
             if ($hour >= 18) {
                 $dueDate = gmdate('Y-m-d', $localTs + 86400);
@@ -137,9 +166,10 @@ if ($forecastJson !== false) {
 
         if ($snowDueDate) {
             $whenText = $snowLocalTs ? gmdate('Y-m-d H:i', $snowLocalTs) : '';
+            $amountText = $snowAmount !== null ? " (~{$snowAmount} mm/3h)" : '';
             $details = $whenText !== ''
-                ? "Schneefall erwartet (Prognose {$whenText})"
-                : "Schneefall erwartet (Prognose)";
+                ? "Schneefall erwartet{$amountText} (Prognose {$whenText})"
+                : "Schneefall erwartet{$amountText} (Prognose)";
             $taskUpsert->execute([
                 ':titel' => 'Schnee schieben',
                 ':details' => $details,

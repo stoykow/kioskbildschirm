@@ -2,8 +2,11 @@
 // Abfallkalender laden + Erledigt-Markierung
 
 let wasteEventsCache = [];
+let tasksCache = [];
 let wasteUsersCache = null;
 let wasteModalReady = false;
+let taskModalReady = false;
+let wasteInteractive = false;
 
 function escapeHtml(value) {
     return String(value || '')
@@ -41,11 +44,12 @@ function getLabel(dateStr) {
     }
 }
 
-function renderWasteRows(entries, interactive) {
-    const wasteDiv = document.getElementById('waste');
+function buildWasteSection(entries, interactive) {
     if (!Array.isArray(entries) || entries.length === 0) {
-        wasteDiv.innerHTML = '<div class="waste-title">Abfallkalender</div><div class="waste-row">Keine Termine gefunden</div>';
-        return;
+        return {
+            html: '<div class="waste-title">Abfallkalender</div><div class="waste-row">Keine Termine gefunden</div>',
+            bind: null
+        };
     }
 
     const today = new Date();
@@ -61,7 +65,7 @@ function renderWasteRows(entries, interactive) {
         .sort((a, b) => new Date(a.date) - new Date(b.date))
         .slice(0, 3);
 
-    wasteDiv.innerHTML = `
+    const html = `
         <div class="waste-title">Abfallkalender</div>
         ${upcoming.length === 0 ? '<div class="waste-row">Keine Termine im Zeitraum</div>' :
             upcoming.map(e => {
@@ -83,9 +87,49 @@ function renderWasteRows(entries, interactive) {
         }
     `;
 
-    if (interactive) {
-        bindWasteRowHandlers();
+    return {
+        html,
+        bind: interactive ? bindWasteRowHandlers : null
+    };
+}
+
+function buildTasksSection(entries, interactive) {
+    const title = '<div class="task-title">Aufgaben</div>';
+    if (!Array.isArray(entries) || entries.length === 0) {
+        return {
+            html: `${title}<div class="task-row">Keine Aufgaben offen</div>`,
+            bind: null
+        };
     }
+
+    const rows = entries.map(task => {
+        const rowClasses = ['task-row'];
+        if (interactive) rowClasses.push('task-clickable');
+        const dataAttr = interactive ? `data-task-id="${task.id}"` : '';
+        const dueText = task.due ? getLabel(task.due) : 'Ohne Datum';
+        const groupText = task.group ? `Zustaendig: ${escapeHtml(task.group)}` : 'Zustaendig: offen';
+        return `
+            <div class="${rowClasses.join(' ')}" ${dataAttr}>
+                <span class="task-name">${escapeHtml(task.title)}</span>
+                <span class="task-meta">${escapeHtml(dueText)} - ${escapeHtml(groupText)}</span>
+            </div>
+        `;
+    }).join('');
+
+    return {
+        html: `${title}${rows}`,
+        bind: interactive ? bindTaskRowHandlers : null
+    };
+}
+
+function renderCombined() {
+    const wasteDiv = document.getElementById('waste');
+    if (!wasteDiv) return;
+    const wasteSection = buildWasteSection(wasteEventsCache, wasteInteractive);
+    const tasksSection = buildTasksSection(tasksCache, true);
+    wasteDiv.innerHTML = `${wasteSection.html}${tasksSection.html}`;
+    if (wasteSection.bind) wasteSection.bind();
+    if (tasksSection.bind) tasksSection.bind();
 }
 
 function fetchWasteUsers() {
@@ -138,7 +182,7 @@ function openWasteModal(eventId) {
     const list = modal.querySelector('.waste-user-list');
 
     title.textContent = eventItem.summary;
-    sub.textContent = `${getLabel(eventItem.date)}${eventItem.start ? ' · ' + eventItem.start : ''}`;
+    sub.textContent = `${getLabel(eventItem.date)}${eventItem.start ? ' - ' + eventItem.start : ''}`;
 
     list.innerHTML = '<div class="waste-loading">Benutzer werden geladen...</div>';
     modal.classList.add('is-open');
@@ -193,7 +237,7 @@ function markWasteDone(eventId, user) {
                 }
                 return e;
             });
-            renderWasteRows(wasteEventsCache, true);
+            renderCombined();
             closeWasteModal();
         })
         .catch(() => {
@@ -213,6 +257,123 @@ function bindWasteRowHandlers() {
     });
 }
 
+function ensureTaskModal() {
+    if (taskModalReady) return;
+    const modal = document.createElement('div');
+    modal.id = 'task-modal';
+    modal.innerHTML = `
+        <div class="task-modal-card">
+            <div class="task-modal-title">Aufgabe</div>
+            <div class="task-modal-sub"></div>
+            <div class="task-user-list"></div>
+            <div class="task-modal-actions">
+                <button class="task-modal-cancel">Abbrechen</button>
+            </div>
+        </div>
+    `;
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeTaskModal();
+        }
+    });
+    document.body.appendChild(modal);
+    modal.querySelector('.task-modal-cancel').addEventListener('click', closeTaskModal);
+    taskModalReady = true;
+}
+
+function openTaskModal(taskId) {
+    const taskItem = tasksCache.find(t => t.id === taskId);
+    if (!taskItem) return;
+
+    ensureTaskModal();
+    const modal = document.getElementById('task-modal');
+    const title = modal.querySelector('.task-modal-title');
+    const sub = modal.querySelector('.task-modal-sub');
+    const list = modal.querySelector('.task-user-list');
+
+    title.textContent = taskItem.title;
+    const dueText = taskItem.due ? getLabel(taskItem.due) : 'Ohne Datum';
+    const groupText = taskItem.group ? `Zustaendig: ${taskItem.group}` : 'Zustaendig: offen';
+    sub.textContent = `${dueText} - ${groupText}`;
+
+    list.innerHTML = '<div class="task-loading">Benutzer werden geladen...</div>';
+    modal.classList.add('is-open');
+
+    fetchWasteUsers()
+        .then(users => {
+            if (!Array.isArray(users) || users.length === 0) {
+                list.innerHTML = '<div class="task-loading">Keine Benutzer vorhanden</div>';
+                return;
+            }
+            list.innerHTML = '';
+            users.forEach(user => {
+                const btn = document.createElement('button');
+                btn.className = 'task-user-button';
+                btn.textContent = user.name;
+                btn.addEventListener('click', () => markTaskDone(taskItem.id, user));
+                list.appendChild(btn);
+            });
+        })
+        .catch(() => {
+            list.innerHTML = '<div class="task-loading">Fehler beim Laden der Benutzer</div>';
+        });
+}
+
+function closeTaskModal() {
+    const modal = document.getElementById('task-modal');
+    if (modal) {
+        modal.classList.remove('is-open');
+    }
+}
+
+function markTaskDone(taskId, user) {
+    fetch('aufgaben_done.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task_id: taskId, user_id: user.id })
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (!data || !data.ok) {
+                throw new Error('Mark task done failed');
+            }
+            tasksCache = tasksCache.filter(t => t.id !== taskId);
+            renderCombined();
+            closeTaskModal();
+        })
+        .catch(() => {
+            closeTaskModal();
+        });
+}
+
+function bindTaskRowHandlers() {
+    const rows = document.querySelectorAll('.task-row[data-task-id]');
+    rows.forEach(row => {
+        row.addEventListener('click', () => {
+            const taskId = parseInt(row.getAttribute('data-task-id'), 10);
+            if (taskId > 0) {
+                openTaskModal(taskId);
+            }
+        });
+    });
+}
+
+function fetchTasks() {
+    fetch('aufgaben_api.php')
+        .then(response => response.json())
+        .then(data => {
+            if (!data || !Array.isArray(data.tasks)) {
+                throw new Error('Invalid aufgaben_api response');
+            }
+            tasksCache = data.tasks;
+            renderCombined();
+        })
+        .catch(() => {
+            tasksCache = [];
+            renderCombined();
+        });
+}
+
 function fetchWaste() {
     fetch('abfall_api.php')
         .then(response => response.json())
@@ -221,13 +382,16 @@ function fetchWaste() {
                 throw new Error('Invalid abfall_api response');
             }
             wasteEventsCache = data.events;
-            renderWasteRows(wasteEventsCache, true);
+            wasteInteractive = true;
+            renderCombined();
         })
         .catch(() => {
             fetch('enso.php')
                 .then(response => response.json())
                 .then(data => {
-                    renderWasteRows(data, false);
+                    wasteEventsCache = data;
+                    wasteInteractive = false;
+                    renderCombined();
                 })
                 .catch(error => {
                     document.getElementById('waste').textContent = 'Fehler beim Laden des Abfallkalenders';

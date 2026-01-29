@@ -168,6 +168,39 @@ body {
     margin-left: auto;
 }
 
+.task-title {
+    font-size: clamp(1.05rem, 1.2vw + 0.3vh, 1.6rem);
+    font-weight: 700;
+    margin: 0.9rem 0 0.5rem;
+    letter-spacing: 0.03em;
+}
+
+.task-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    width: 100%;
+    background: rgba(255,255,255,0.06);
+    border-radius: 0.7rem;
+    padding: 0.6rem 1rem;
+    font-size: clamp(0.95rem, 0.8vw + 0.2vh, 1.3rem);
+    margin-bottom: 0.25rem;
+}
+
+.task-clickable {
+    cursor: pointer;
+}
+
+.task-name {
+    font-weight: 600;
+    color: #fff;
+}
+
+.task-meta {
+    font-weight: 400;
+    color: #aaa;
+}
+
 #waste-modal {
     position: fixed;
     inset: 0;
@@ -239,6 +272,81 @@ body {
 
 .waste-loading,
 .waste-done-info {
+    color: #bbb;
+    font-size: 0.95rem;
+    padding: 0.4rem 0;
+}
+
+#task-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.72);
+    z-index: 1000;
+}
+
+#task-modal.is-open {
+    display: flex;
+}
+
+.task-modal-card {
+    background: #111;
+    border-radius: 1rem;
+    padding: 1.2rem 1.4rem;
+    width: min(86vw, 620px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+.task-modal-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+}
+
+.task-modal-sub {
+    color: #bbb;
+    font-size: 0.95rem;
+}
+
+.task-user-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.6rem;
+    margin-top: 1rem;
+}
+
+.task-user-button {
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 0.7rem;
+    padding: 0.6rem 0.8rem;
+    font-size: 1rem;
+}
+
+.task-user-button:active {
+    transform: scale(0.98);
+}
+
+.task-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1rem;
+}
+
+.task-modal-cancel {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 0.6rem;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.95rem;
+}
+
+.task-loading {
     color: #bbb;
     font-size: 0.95rem;
     padding: 0.4rem 0;

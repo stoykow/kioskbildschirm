@@ -46,7 +46,7 @@ async function fetchTrams() {
     const tramDiv = document.getElementById('tram');
     tramDiv.textContent = 'Lädt Straßenbahn-Abfahrten...';
     try {
-        const response = await fetch('abfahrten.php?typ=tram&limit=4');
+        const response = await fetch('abfahrten.php?typ=tram&limit=2');
         const departures = await response.json();
 
         if (!Array.isArray(departures) || departures.length === 0) {
@@ -56,7 +56,7 @@ async function fetchTrams() {
 
         tramDiv.innerHTML = `
             <div class="train-title">Tram ab Lutherstraße</div>
-            ` + departures.slice(0, 4).map(dep => {
+            ` + departures.slice(0, 2).map(dep => {
             const time = dep.anzeige_zeit || new Date(dep.tatsaechliche_zeit || dep.geplante_zeit).toLocaleTimeString('de-DE', {
                 hour: '2-digit',
                 minute: '2-digit'

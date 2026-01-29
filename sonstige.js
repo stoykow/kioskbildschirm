@@ -32,11 +32,11 @@ function sonstigeGetLabel(dateStr) {
     } else if (diff == 1) {
         return `Morgen ${tagDatum}`;
     } else if (diff == 2) {
-        return `Uebermorgen ${tagDatum}`;
+        return `Übermorgen ${tagDatum}`;
     } else if (diff < (7 - isoDay)) {
         return `am ${tag} ${tagDatum}`;
     } else if (diff < (14 - isoDay)) {
-        return `naechster ${tag} ${tagDatum}`;
+        return `nächster ${tag} ${tagDatum}`;
     } else {
         return `am ${tagDatum2}`;
     }
@@ -45,7 +45,7 @@ function sonstigeGetLabel(dateStr) {
 function buildSonstigeSection(entries, interactive) {
     if (!Array.isArray(entries) || entries.length === 0) {
         return {
-            html: '<div class="sonstige-title">Sonstige Termine</div><div class="sonstige-row">Keine Termine gefunden</div>',
+            html: '',
             bind: null
         };
     }
@@ -53,27 +53,34 @@ function buildSonstigeSection(entries, interactive) {
     const upcoming = entries
         .sort((a, b) => new Date(a.date) - new Date(b.date));
 
+    if (upcoming.length === 0) {
+        return { html: '', bind: null };
+    }
+
     const html = `
         <div class="sonstige-title">Sonstige Termine</div>
-        ${upcoming.length === 0 ? '<div class="sonstige-row">Keine Termine im Zeitraum</div>' :
-            upcoming.map(e => {
-                const rowClasses = ['sonstige-row'];
-                if (interactive) rowClasses.push('sonstige-clickable');
-                const dataAttr = interactive && e.id ? `data-termin-id="${e.id}"` : '';
-                const time = e.start ? `<span class="sonstige-time">${sonstigeEscapeHtml(e.start)}${e.end ? ' - ' + sonstigeEscapeHtml(e.end) : ''}</span>` : '';
-                const hint = e.hint ? `<span class="sonstige-hint">${sonstigeEscapeHtml(e.hint)}</span>` : '';
-                const statusText = e.zuhause_by ? `Zuhause: ${sonstigeEscapeHtml(e.zuhause_by)}` : 'Zuhause: -';
-                return `
-                    <div class="${rowClasses.join(' ')}" ${dataAttr}>
-                        <span class="sonstige-date">${sonstigeEscapeHtml(sonstigeGetLabel(e.date))}</span>
-                        <span class="sonstige-type">${sonstigeEscapeHtml(e.title)}</span>
-                        ${hint}
-                        ${time}
-                        <span class="sonstige-status">${statusText}</span>
-                    </div>
-                `;
-            }).join('')
-        }
+        ${upcoming.map(e => {
+            const rowClasses = ['sonstige-row'];
+            if (interactive) rowClasses.push('sonstige-clickable');
+            const dataAttr = interactive && e.id ? `data-termin-id="${e.id}"` : '';
+            const time = e.start ? `<span class="sonstige-time">${sonstigeEscapeHtml(e.start)}${e.end ? ' - ' + sonstigeEscapeHtml(e.end) : ''}</span>` : '';
+            const hint = e.hint ? `<span class="sonstige-hint">${sonstigeEscapeHtml(e.hint)}</span>` : '';
+            const needsHome = !!e.requires_home;
+            const hasHome = e.zuhause_by && String(e.zuhause_by).trim() !== '';
+            const showStatus = needsHome;
+            const statusClass = hasHome ? 'sonstige-status' : 'sonstige-status sonstige-status-warn';
+            const statusText = hasHome ? `Zuhause: ${sonstigeEscapeHtml(e.zuhause_by)}` : 'Keiner zuhause';
+            const statusHtml = showStatus ? `<span class="${statusClass}">${statusText}</span>` : '';
+            return `
+                <div class="${rowClasses.join(' ')}" ${dataAttr}>
+                    <span class="sonstige-date">${sonstigeEscapeHtml(sonstigeGetLabel(e.date))}</span>
+                    <span class="sonstige-type">${sonstigeEscapeHtml(e.title)}</span>
+                    ${hint}
+                    ${time}
+                    ${statusHtml}
+                </div>
+            `;
+        }).join('')}
     `;
 
     return {
@@ -86,6 +93,12 @@ function renderSonstige() {
     const sonstigeDiv = document.getElementById('sonstige');
     if (!sonstigeDiv) return;
     const section = buildSonstigeSection(sonstigeEventsCache, sonstigeInteractive);
+    if (!section.html) {
+        sonstigeDiv.innerHTML = '';
+        sonstigeDiv.style.display = 'none';
+        return;
+    }
+    sonstigeDiv.style.display = '';
     sonstigeDiv.innerHTML = section.html;
     if (section.bind) section.bind();
 }

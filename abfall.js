@@ -39,11 +39,11 @@ function getLabel(dateStr) {
     } else if (diff == 1) {
         return `Morgen ${tagDatum}`;
     } else if (diff == 2) {
-        return `Uebermorgen ${tagDatum}`;
+        return `Übermorgen ${tagDatum}`;
     } else if (diff < (7 - isoDay)) {
         return `am ${tag} ${tagDatum}`;
     } else if (diff < (14 - isoDay)) {
-        return `naechster ${tag} ${tagDatum}`;
+        return `nächster ${tag} ${tagDatum}`;
     } else {
         return `am ${tagDatum2}`;
     }
@@ -52,7 +52,7 @@ function getLabel(dateStr) {
 function buildWasteSection(entries, interactive) {
     if (!Array.isArray(entries) || entries.length == 0) {
         return {
-            html: '<div class="waste-title">Abfallkalender</div><div class="waste-row">Keine Termine gefunden</div>',
+            html: '',
             bind: null
         };
     }
@@ -61,30 +61,32 @@ function buildWasteSection(entries, interactive) {
         .sort((a, b) => new Date(a.date) - new Date(b.date))
         .slice(0, 3);
 
+    if (upcoming.length === 0) {
+        return { html: '', bind: null };
+    }
+
     const html = `
         <div class="waste-title">Abfallkalender</div>
-        ${upcoming.length == 0 ? '<div class="waste-row">Keine Termine im Zeitraum</div>' :
-            upcoming.map(e => {
-                const isSchadstoff = String(e.summary || '').toLowerCase().startsWith('schadstoffmobil');
-                const showStatus = !isSchadstoff;
-                const rowClasses = ['waste-row'];
-                if (interactive && !isSchadstoff) rowClasses.push('waste-clickable');
-                if (showStatus && e.done_by) rowClasses.push('waste-done-row');
-                const statusClass = e.done_by ? 'waste-status waste-status-done' : 'waste-status waste-status-open';
-                const statusText = e.done_by ? `Erledigt: ${escapeHtml(e.done_by)}` : 'Unerledigt';
-                const doneBadge = showStatus ? `<span class="${statusClass}">${statusText}</span>` : '';
-                const time = e.start ? `<span class="waste-time">${escapeHtml(e.start)}${e.end ? ' - ' + escapeHtml(e.end) : ''}</span>` : '';
-                const dataAttr = interactive && !isSchadstoff && e.id ? `data-event-id="${e.id}"` : '';
-                return `
-                    <div class="${rowClasses.join(' ')}" ${dataAttr}>
-                        <span class="waste-date">${escapeHtml(getLabel(e.date))}</span>
-                        <span class="waste-type">${escapeHtml(e.summary)}</span>
-                        ${time}
-                        ${doneBadge}
-                    </div>
-                `;
-            }).join('')
-        }
+        ${upcoming.map(e => {
+            const isSchadstoff = String(e.summary || '').toLowerCase().startsWith('schadstoffmobil');
+            const showStatus = !isSchadstoff;
+            const rowClasses = ['waste-row'];
+            if (interactive && !isSchadstoff) rowClasses.push('waste-clickable');
+            if (showStatus && e.done_by) rowClasses.push('waste-done-row');
+            const statusClass = e.done_by ? 'waste-status waste-status-done' : 'waste-status waste-status-open';
+            const statusText = e.done_by ? `Erledigt: ${escapeHtml(e.done_by)}` : 'Unerledigt';
+            const doneBadge = showStatus ? `<span class="${statusClass}">${statusText}</span>` : '';
+            const time = e.start ? `<span class="waste-time">${escapeHtml(e.start)}${e.end ? ' - ' + escapeHtml(e.end) : ''}</span>` : '';
+            const dataAttr = interactive && !isSchadstoff && e.id ? `data-event-id="${e.id}"` : '';
+            return `
+                <div class="${rowClasses.join(' ')}" ${dataAttr}>
+                    <span class="waste-date">${escapeHtml(getLabel(e.date))}</span>
+                    <span class="waste-type">${escapeHtml(e.summary)}</span>
+                    ${time}
+                    ${doneBadge}
+                </div>
+            `;
+        }).join('')}
     `;
 
     return {
@@ -105,7 +107,11 @@ function renderCombined() {
     if (!wasteDiv) return;
     const wasteSection = buildWasteSection(wasteEventsCache, wasteInteractive);
     const tasksSection = getTasksSection();
-    wasteDiv.innerHTML = `${wasteSection.html}${tasksSection.html}`;
+    if (!wasteSection.html) {
+        wasteDiv.innerHTML = tasksSection.html;
+    } else {
+        wasteDiv.innerHTML = `${wasteSection.html}${tasksSection.html}`;
+    }
     if (wasteSection.bind) wasteSection.bind();
     if (tasksSection.bind) tasksSection.bind();
 }

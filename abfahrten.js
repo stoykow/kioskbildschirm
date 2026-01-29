@@ -3,7 +3,7 @@
 
 async function fetchTrains() {
     const trainDiv = document.getElementById('train');
-    trainDiv.textContent = 'Laedt Zugdaten...';
+    trainDiv.textContent = 'Lädt Zugdaten...';
     try {
         const response = await fetch('abfahrten.php?typ=zug&limit=6');
         const trainOnly = await response.json();
@@ -14,7 +14,7 @@ async function fetchTrains() {
         }
 
         trainDiv.innerHTML = `
-            <div class="train-title">Zuege ab Goerlitz Hbf</div>
+            <div class="train-title">Züge ab Görlitz Hbf</div>
             ` + trainOnly.slice(0, 6).map(dep => {
             const time = dep.anzeige_zeit || new Date(dep.tatsaechliche_zeit || dep.geplante_zeit).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
             const line = dep.linie || '';
@@ -37,13 +37,13 @@ async function fetchTrains() {
 
 async function fetchTrams() {
     const tramDiv = document.getElementById('tram');
-    tramDiv.textContent = 'Laedt Strassenbahn-Abfahrten...';
+    tramDiv.textContent = 'Lädt Straßenbahn-Abfahrten...';
     try {
         const response = await fetch('abfahrten.php?typ=tram&limit=4');
         const departures = await response.json();
 
         if (!Array.isArray(departures) || departures.length === 0) {
-            tramDiv.textContent = 'Keine Strassenbahn-Abfahrten gefunden.';
+            tramDiv.textContent = 'Keine Straßenbahn-Abfahrten gefunden.';
             return;
         }
 
@@ -66,14 +66,14 @@ async function fetchTrams() {
         }).join('');
 
     } catch (e) {
-        tramDiv.textContent = 'Fehler beim Laden der Strassenbahn-Daten.';
-        console.error('Fehler beim Laden der Strassenbahn-Daten:', e);
+        tramDiv.textContent = 'Fehler beim Laden der Straßenbahn-Daten.';
+        console.error('Fehler beim Laden der Straßenbahn-Daten:', e);
     }
 }
 
 async function fetchBus() {
     const busDiv = document.getElementById('bus');
-    busDiv.textContent = 'Laedt Bus-Abfahrten...';
+    busDiv.textContent = 'Lädt Bus-Abfahrten...';
     try {
         const response = await fetch('abfahrten.php?typ=bus&limit=6');
         const departures = await response.json();

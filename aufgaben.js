@@ -38,11 +38,11 @@ function getLabel(dateStr) {
     } else if (diff === 1) {
         return `Morgen ${tagDatum}`;
     } else if (diff === 2) {
-        return `Uebermorgen ${tagDatum}`;
+        return `Übermorgen ${tagDatum}`;
     } else if (diff < (7 - isoDay)) {
         return `am ${tag} ${tagDatum}`;
     } else if (diff < (14 - isoDay)) {
-        return `naechster ${tag} ${tagDatum}`;
+        return `nächster ${tag} ${tagDatum}`;
     } else {
         return `am ${tagDatum2}`;
     }

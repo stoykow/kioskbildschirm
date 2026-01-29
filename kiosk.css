@@ -228,6 +228,10 @@ body {
     color: #7fe6a3;
 }
 
+.sonstige-status-warn {
+    color: #ff7a7a;
+}
+
 .waste-clickable {
     cursor: pointer;
 }
@@ -617,6 +621,19 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.weather-status {
+    margin-left: auto;
+    font-weight: 700;
+}
+
+.weather-status-open {
+    color: #ff7a7a;
+}
+
+.weather-status-closed {
+    color: #7fe6a3;
 }
 
 @media (max-width: 1200px) {

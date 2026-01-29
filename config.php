@@ -44,7 +44,7 @@ function load_app_config(PDO $pdo, array $defaults) {
     return $defaults;
 }
 
-function app_config_get(PDO $pdo = null) {
+function app_config_get(?PDO $pdo = null) {
     $defaults = [
         'openweather_lat' => '51.1508',
         'openweather_lon' => '14.9684',

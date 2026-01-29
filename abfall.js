@@ -124,9 +124,12 @@ function buildTasksSection(entries, interactive) {
         const statusClass = task.done_by ? 'task-status task-status-done' : 'task-status task-status-open';
         return `
             <div class="${rowClasses.join(' ')}" ${dataAttr}>
-                <span class="task-name">${titleText}</span>
-                <span class="task-meta">${escapeHtml(dueText)} - ${escapeHtml(groupText)}</span>
-                <span class="${statusClass}">${escapeHtml(doneText)}</span>
+                <div class="task-line">
+                    <span class="task-date">${escapeHtml(dueText)}</span>
+                    <span class="task-name">${titleText}</span>
+                    <span class="task-group">(${escapeHtml(groupName)})</span>
+                    <span class="${statusClass}">${escapeHtml(doneText)}</span>
+                </div>
             </div>
         `;
     }).join('');

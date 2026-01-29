@@ -621,11 +621,19 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+    justify-content: flex-end;
 }
 
 .weather-status {
-    margin-left: auto;
     font-weight: 700;
+}
+
+.weather-status-time {
+    font-weight: 400;
+    color: #aaa;
 }
 
 .weather-status-open {

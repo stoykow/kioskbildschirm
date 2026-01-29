@@ -10,8 +10,10 @@ $load_gelbe = true;
 $load_papier = true;
 $load_schadstoff = true;
 
-// Nur Schadstoffmobil Sechsstädteplatz
-$schadstoff_location = 'Görlitz, Sechsstädteplatz';
+// Nur diese Schadstoffmobil-Standorte (leer = alle)
+$schadstoff_locations = [
+    'Goerlitz, Sechsstaedteplatz',
+];
 
 $icsUrl = 'https://www.abfall-eglz.de/abfallkalender.html?ort=G%C3%B6rlitz&strasse=Lutherstra%C3%9Fe&ortsteil=&ics=1';
 
@@ -95,6 +97,24 @@ $taskUpsert = $pdo->prepare(
 $inserted = 0;
 $skipped = 0;
 
+function normalize_location($value) {
+    $value = is_string($value) ? $value : '';
+    if (function_exists('mb_strtolower')) {
+        $value = mb_strtolower($value, 'UTF-8');
+    } else {
+        $value = strtolower($value);
+    }
+    return strtr($value, [
+        'ä' => 'ae',
+        'ö' => 'oe',
+        'ü' => 'ue',
+        'ß' => 'ss',
+        'Ä' => 'ae',
+        'Ö' => 'oe',
+        'Ü' => 'ue',
+    ]);
+}
+
 $pdo->beginTransaction();
 try {
     foreach ($blocks as $block) {
@@ -158,9 +178,13 @@ try {
                 $skipped++;
                 continue;
             }
-            if ($schadstoff_location !== '' && $location !== $schadstoff_location) {
-                $skipped++;
-                continue;
+            if (!empty($schadstoff_locations)) {
+                $normalizedLocation = normalize_location($location);
+                $allowed = array_map('normalize_location', $schadstoff_locations);
+                if (!in_array($normalizedLocation, $allowed, true)) {
+                    $skipped++;
+                    continue;
+                }
             }
             $event['summary'] = 'Schadstoffmobil Sechsstädteplatz';
         }

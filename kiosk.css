@@ -401,6 +401,15 @@ body {
     font-size: 0.95rem;
 }
 
+.task-modal-undone {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 0.6rem;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.95rem;
+}
+
 .task-modal-confirm {
     background: rgba(255,255,255,0.12);
     color: #fff;

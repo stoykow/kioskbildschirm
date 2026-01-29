@@ -67,8 +67,8 @@ $stmt = $pdo->prepare(
         l.modus,
         l.produkt
      FROM abfahrten a
-     JOIN haltestellen h ON h.id = a.haltestelle_id
-     JOIN linien l ON l.id = a.linie_id
+     JOIN abfahrten_haltestellen h ON h.id = a.haltestelle_id
+     JOIN abfahrten_linien l ON l.id = a.linie_id
      WHERE h.name = :stop_name
        AND {$modeCondition}
        AND COALESCE(a.tatsaechliche_zeit, a.geplante_zeit) >= :now_time

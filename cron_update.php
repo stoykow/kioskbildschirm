@@ -47,13 +47,13 @@ $stops = [
 $pdo->beginTransaction();
 try {
     $stopUpsert = $pdo->prepare(
-        "INSERT INTO haltestellen (externe_id, name)
+        "INSERT INTO abfahrten_haltestellen (externe_id, name)
          VALUES (:externe_id, :name)
          ON DUPLICATE KEY UPDATE name = VALUES(name)"
     );
 
     $lineUpsert = $pdo->prepare(
-        "INSERT INTO linien (name, modus, produkt)
+        "INSERT INTO abfahrten_linien (name, modus, produkt)
          VALUES (:name, :modus, :produkt)
          ON DUPLICATE KEY UPDATE modus = VALUES(modus), produkt = VALUES(produkt)"
     );
@@ -76,7 +76,7 @@ try {
         ]);
 
         $stopId = $pdo->query(
-            "SELECT id FROM haltestellen WHERE externe_id = " . $pdo->quote($stop['external_id']) . " LIMIT 1"
+            "SELECT id FROM abfahrten_haltestellen WHERE externe_id = " . $pdo->quote($stop['external_id']) . " LIMIT 1"
         )->fetchColumn();
 
         $json = @file_get_contents($stop['url']);
@@ -107,7 +107,7 @@ try {
             ]);
 
             $lineId = $pdo->query(
-                "SELECT id FROM linien WHERE name = " . $pdo->quote($lineName) . " LIMIT 1"
+                "SELECT id FROM abfahrten_linien WHERE name = " . $pdo->quote($lineName) . " LIMIT 1"
             )->fetchColumn();
 
             $plannedRaw = $dep['plannedWhen'] ?? $dep['when'] ?? null;

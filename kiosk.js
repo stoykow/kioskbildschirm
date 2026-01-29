@@ -9,6 +9,7 @@ function initKiosk() {
     fetchTrains();
     fetchTrams();
     fetchBus();
+    setInterval(updateStatusTime, 1000); // Datum/Uhrzeit im Status jede Sekunde
     setInterval(fetchWeather, 600000); // Aktualisiere das Wetter alle 10 Minuten
     setInterval(fetchTrains, 300000); // Aktualisiere die Zugdaten alle 5 Minuten
     setInterval(fetchTrams, 300000); // Aktualisiere die Tramdaten alle 5 Minuten

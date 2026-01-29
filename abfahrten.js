@@ -13,9 +13,16 @@ async function fetchTrains() {
             return;
         }
 
+        const trainsWithDirection = trainOnly.filter(dep => dep && String(dep.richtung || '').trim() !== '');
+
+        if (trainsWithDirection.length === 0) {
+            trainDiv.textContent = 'Keine Zugabfahrten gefunden.';
+            return;
+        }
+
         trainDiv.innerHTML = `
             <div class="train-title">Züge ab Görlitz Hbf</div>
-            ` + trainOnly.slice(0, 6).map(dep => {
+            ` + trainsWithDirection.slice(0, 6).map(dep => {
             const time = dep.anzeige_zeit || new Date(dep.tatsaechliche_zeit || dep.geplante_zeit).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
             const line = dep.linie || '';
             const direction = dep.richtung || '';

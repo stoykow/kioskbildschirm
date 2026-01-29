@@ -71,6 +71,7 @@ function buildWasteSection(entries, interactive) {
             const isSchadstoff = String(e.summary || '').toLowerCase().startsWith('schadstoffmobil');
             const showStatus = !isSchadstoff;
             const rowClasses = ['waste-row'];
+            if (isSchadstoff) rowClasses.push('waste-row-muted');
             if (interactive && !isSchadstoff) rowClasses.push('waste-clickable');
             if (showStatus && e.done_by) rowClasses.push('waste-done-row');
             const statusClass = e.done_by ? 'waste-status waste-status-done' : 'waste-status waste-status-open';

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // Zentral-Admin (ohne Login)
 
 header('Content-Type: text/html; charset=utf-8');
@@ -289,5 +289,5 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
         </table>
     </div>
 </body>
-</html>
-
+</html>
+

@@ -3,16 +3,7 @@
 
 header('Content-Type: application/json; charset=utf-8');
 
-$dbHost = getenv('DB_HOST') ?: 'localhost';
-$dbName = getenv('DB_NAME') ?: '';
-$dbUser = getenv('DB_USER') ?: '';
-$dbPass = getenv('DB_PASS') ?: '';
-
-if ($dbName === '' || $dbUser === '') {
-    http_response_code(500);
-    echo json_encode(['error' => 'DB env vars missing (DB_NAME/DB_USER)']);
-    exit;
-}
+require_once __DIR__ . '/config.php';
 
 $raw = file_get_contents('php://input');
 $data = json_decode($raw, true);
@@ -42,12 +33,11 @@ if (is_array($userIds)) {
 }
 
 try {
-    $pdo = new PDO(
-        "mysql:host={$dbHost};dbname={$dbName};charset=utf8mb4",
-        $dbUser,
-        $dbPass,
-        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]
-    );
+    $pdo = db_connect();
+} catch (RuntimeException $e) {
+    http_response_code(500);
+    echo json_encode(['error' => $e->getMessage()]);
+    exit;
 } catch (PDOException $e) {
     http_response_code(500);
     echo json_encode(['error' => 'DB connect failed']);

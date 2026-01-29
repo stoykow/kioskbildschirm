@@ -57,16 +57,7 @@ function buildWasteSection(entries, interactive) {
         };
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const in14 = new Date(today);
-    in14.setDate(today.getDate() + 14);
-
     const upcoming = entries
-        .filter(e => {
-            const d = new Date(e.date);
-            return d >= today && d <= in14;
-        })
         .sort((a, b) => new Date(a.date) - new Date(b.date))
         .slice(0, 3);
 

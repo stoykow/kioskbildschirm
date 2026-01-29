@@ -72,7 +72,9 @@ function buildWasteSection(entries, interactive) {
                 const rowClasses = ['waste-row'];
                 if (interactive) rowClasses.push('waste-clickable');
                 if (e.done_by) rowClasses.push('waste-done-row');
-                const doneBadge = e.done_by ? `<span class="waste-done">Erledigt: ${escapeHtml(e.done_by)}</span>` : '';
+                const statusClass = e.done_by ? 'waste-status waste-status-done' : 'waste-status waste-status-open';
+                const statusText = e.done_by ? `Erledigt: ${escapeHtml(e.done_by)}` : 'Unerledigt';
+                const doneBadge = `<span class="${statusClass}">${statusText}</span>`;
                 const time = e.start ? `<span class="waste-time">${escapeHtml(e.start)}${e.end ? ' - ' + escapeHtml(e.end) : ''}</span>` : '';
                 const dataAttr = interactive && e.id ? `data-event-id="${e.id}"` : '';
                 return `
@@ -157,6 +159,7 @@ function ensureWasteModal() {
             <div class="waste-modal-sub"></div>
             <div class="waste-user-list"></div>
             <div class="waste-modal-actions">
+                <button class="waste-modal-undone">Nicht erledigt</button>
                 <button class="waste-modal-cancel">Abbrechen</button>
             </div>
         </div>
@@ -168,6 +171,12 @@ function ensureWasteModal() {
     });
     document.body.appendChild(modal);
     modal.querySelector('.waste-modal-cancel').addEventListener('click', closeWasteModal);
+    modal.querySelector('.waste-modal-undone').addEventListener('click', () => {
+        const eventId = parseInt(modal.getAttribute('data-event-id') || '0', 10);
+        if (eventId > 0) {
+            markWasteUndone(eventId);
+        }
+    });
     wasteModalReady = true;
 }
 
@@ -180,9 +189,17 @@ function openWasteModal(eventId) {
     const title = modal.querySelector('.waste-modal-title');
     const sub = modal.querySelector('.waste-modal-sub');
     const list = modal.querySelector('.waste-user-list');
+    const undoButton = modal.querySelector('.waste-modal-undone');
 
     title.textContent = eventItem.summary;
     sub.textContent = `${getLabel(eventItem.date)}${eventItem.start ? ' - ' + eventItem.start : ''}`;
+    modal.setAttribute('data-event-id', String(eventItem.id));
+
+    if (eventItem.done_by) {
+        undoButton.style.display = 'inline-flex';
+    } else {
+        undoButton.style.display = 'none';
+    }
 
     list.innerHTML = '<div class="waste-loading">Benutzer werden geladen...</div>';
     modal.classList.add('is-open');
@@ -216,6 +233,7 @@ function openWasteModal(eventId) {
 function closeWasteModal() {
     const modal = document.getElementById('waste-modal');
     if (modal) {
+        modal.removeAttribute('data-event-id');
         modal.classList.remove('is-open');
     }
 }
@@ -234,6 +252,31 @@ function markWasteDone(eventId, user) {
             wasteEventsCache = wasteEventsCache.map(e => {
                 if (e.id === eventId) {
                     return { ...e, done_by: user.name, done_at: new Date().toISOString() };
+                }
+                return e;
+            });
+            renderCombined();
+            closeWasteModal();
+        })
+        .catch(() => {
+            closeWasteModal();
+        });
+}
+
+function markWasteUndone(eventId) {
+    fetch('abfall_done.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event_id: eventId, undone: true })
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (!data || !data.ok) {
+                throw new Error('Mark undone failed');
+            }
+            wasteEventsCache = wasteEventsCache.map(e => {
+                if (e.id === eventId) {
+                    return { ...e, done_by: null, done_at: null };
                 }
                 return e;
             });

@@ -162,10 +162,18 @@ body {
     opacity: 0.65;
 }
 
-.waste-done {
+.waste-status {
     font-size: 0.9em;
-    color: #7fe6a3;
     margin-left: auto;
+    font-weight: 600;
+}
+
+.waste-status-done {
+    color: #7fe6a3;
+}
+
+.waste-status-open {
+    color: #ff7a7a;
 }
 
 .task-title {
@@ -258,10 +266,20 @@ body {
 .waste-modal-actions {
     display: flex;
     justify-content: flex-end;
+    gap: 0.6rem;
     margin-top: 1rem;
 }
 
 .waste-modal-cancel {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 0.6rem;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.95rem;
+}
+
+.waste-modal-undone {
     background: rgba(255,255,255,0.12);
     color: #fff;
     border: 1px solid rgba(255,255,255,0.16);

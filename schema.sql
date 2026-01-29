@@ -74,12 +74,14 @@ CREATE TABLE IF NOT EXISTS abfall_termine (
   summary VARCHAR(255) NOT NULL,
   start_time TIME NULL,
   end_time TIME NULL,
+  zustaendig_gruppe_id INT NULL,
   erledigt_von INT NULL,
   erledigt_am TIMESTAMP NULL,
   erstellt_am TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   aktualisiert_am TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_abfall_datum (datum),
-  CONSTRAINT fk_abfall_termine_benutzer FOREIGN KEY (erledigt_von) REFERENCES benutzer(id)
+  CONSTRAINT fk_abfall_termine_benutzer FOREIGN KEY (erledigt_von) REFERENCES benutzer(id),
+  CONSTRAINT fk_abfall_termine_gruppe FOREIGN KEY (zustaendig_gruppe_id) REFERENCES benutzer_gruppen(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS aufgaben (

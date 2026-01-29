@@ -35,6 +35,17 @@ function formatLockState(state) {
     return { label: state, className: '' };
 }
 
+function formatNowDateTime() {
+    const now = new Date();
+    return now.toLocaleString('de-DE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
 async function fetchHaGeraet(geraet) {
     const res = await fetch(`geraet_status.php?geraet=${encodeURIComponent(geraet)}&limit=1`);
     const data = await res.json();
@@ -82,6 +93,7 @@ async function fetchWeather() {
         const dosis = pickValue(geiger, GEIGER_DOSIS);
         const tuerStatus = tuer && tuer[TUER_STATUS] ? tuer[TUER_STATUS].state : null;
         const tuerInfo = formatLockState(tuerStatus);
+        const statusTime = formatNowDateTime();
 
         const tempText = temp ? `${temp.value} ${temp.unit || 'C'}` : 'n.v.';
         const humText = hum ? `${hum.value} ${hum.unit || '%'}` : 'n.v.';
@@ -89,7 +101,12 @@ async function fetchWeather() {
         const dosisText = dosis ? `${dosis.value} ${dosis.unit || 'uSv/h'}` : 'n.v.';
 
         document.getElementById('weather').innerHTML =
-            `<div class="weather-title">Umwelt / Status</div>` +
+            `<div class="weather-row">
+                <span class="weather-label">Status:</span>
+                <span class="weather-value">
+                    <span class="weather-status-time">${statusTime}</span>
+                </span>
+            </div>` +
             `<div class="weather-row">
                 <span class="weather-label">Temp / Feuchte:</span>
                 <span class="weather-value">${tempText} / ${humText}</span>

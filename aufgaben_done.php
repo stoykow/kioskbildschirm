@@ -25,6 +25,7 @@ if (!is_array($data)) {
 $taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
 $userIds = $data['user_ids'] ?? null;
 $userId = isset($data['user_id']) ? (int)$data['user_id'] : 0;
+$markUndone = !empty($data['undone']);
 
 if ($taskId <= 0) {
     http_response_code(400);
@@ -40,7 +41,7 @@ if (is_array($userIds)) {
     $userIds = [];
 }
 
-if (count($userIds) === 0) {
+if (!$markUndone && count($userIds) === 0) {
     http_response_code(400);
     echo json_encode(['error' => 'user_id(s) erforderlich']);
     exit;
@@ -63,18 +64,20 @@ try {
     $pdo->beginTransaction();
 
     $validUsers = [];
-    $checkUser = $pdo->prepare("SELECT id FROM benutzer WHERE id = :id AND aktiv = 1 LIMIT 1");
-    foreach ($userIds as $uid) {
-        $checkUser->execute([':id' => $uid]);
-        if ($checkUser->fetch()) {
-            $validUsers[] = $uid;
+    if (!$markUndone) {
+        $checkUser = $pdo->prepare("SELECT id FROM benutzer WHERE id = :id AND aktiv = 1 LIMIT 1");
+        foreach ($userIds as $uid) {
+            $checkUser->execute([':id' => $uid]);
+            if ($checkUser->fetch()) {
+                $validUsers[] = $uid;
+            }
         }
-    }
-    if (count($validUsers) === 0) {
-        $pdo->rollBack();
-        http_response_code(400);
-        echo json_encode(['error' => 'Unbekannte Benutzer']);
-        exit;
+        if (count($validUsers) === 0) {
+            $pdo->rollBack();
+            http_response_code(400);
+            echo json_encode(['error' => 'Unbekannte Benutzer']);
+            exit;
+        }
     }
 
     $checkTask = $pdo->prepare("SELECT id FROM aufgaben WHERE id = :id LIMIT 1");
@@ -86,21 +89,28 @@ try {
         exit;
     }
 
-    $ins = $pdo->prepare(
-        "INSERT INTO aufgaben_erledigt (aufgabe_id, benutzer_id)
-         VALUES (:task_id, :user_id)
-         ON DUPLICATE KEY UPDATE erledigt_am = VALUES(erledigt_am)"
-    );
-    foreach ($validUsers as $uid) {
-        $ins->execute([':task_id' => $taskId, ':user_id' => $uid]);
-    }
+    if ($markUndone) {
+        $del = $pdo->prepare("DELETE FROM aufgaben_erledigt WHERE aufgabe_id = :task_id");
+        $del->execute([':task_id' => $taskId]);
+        $upd = $pdo->prepare("UPDATE aufgaben SET erledigt_am = NULL WHERE id = :task_id");
+        $upd->execute([':task_id' => $taskId]);
+    } else {
+        $ins = $pdo->prepare(
+            "INSERT INTO aufgaben_erledigt (aufgabe_id, benutzer_id)
+             VALUES (:task_id, :user_id)
+             ON DUPLICATE KEY UPDATE erledigt_am = VALUES(erledigt_am)"
+        );
+        foreach ($validUsers as $uid) {
+            $ins->execute([':task_id' => $taskId, ':user_id' => $uid]);
+        }
 
-    $upd = $pdo->prepare(
-        "UPDATE aufgaben
-         SET erledigt_am = NOW()
-         WHERE id = :task_id"
-    );
-    $upd->execute([':task_id' => $taskId]);
+        $upd = $pdo->prepare(
+            "UPDATE aufgaben
+             SET erledigt_am = NOW()
+             WHERE id = :task_id"
+        );
+        $upd->execute([':task_id' => $taskId]);
+    }
 
     $pdo->commit();
     echo json_encode(['ok' => true]);

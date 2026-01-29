@@ -31,10 +31,19 @@ $today = (new DateTimeImmutable('today'))->format('Y-m-d');
 $in14 = (new DateTimeImmutable('today'))->modify('+14 days')->format('Y-m-d');
 
 $stmt = $pdo->prepare(
-    "SELECT t.id, t.datum, t.summary, t.start_time, t.end_time, t.erledigt_am, b.name AS erledigt_von_name
+    "SELECT
+        t.id,
+        t.datum,
+        t.summary,
+        t.start_time,
+        t.end_time,
+        t.erledigt_am,
+        GROUP_CONCAT(b.name ORDER BY b.name SEPARATOR ', ') AS erledigt_namen
      FROM abfall_termine t
-     LEFT JOIN benutzer b ON b.id = t.erledigt_von
+     LEFT JOIN abfall_erledigt ae ON ae.termin_id = t.id
+     LEFT JOIN benutzer b ON b.id = ae.benutzer_id
      WHERE t.datum BETWEEN :start AND :end
+     GROUP BY t.id
      ORDER BY t.datum ASC, t.start_time ASC, t.id ASC"
 );
 $stmt->execute([':start' => $today, ':end' => $in14]);
@@ -47,7 +56,7 @@ foreach ($stmt->fetchAll() as $row) {
         'start' => $row['start_time'] ? substr($row['start_time'], 0, 5) : null,
         'end' => $row['end_time'] ? substr($row['end_time'], 0, 5) : null,
         'done_at' => $row['erledigt_am'],
-        'done_by' => $row['erledigt_von_name'],
+        'done_by' => $row['erledigt_namen'],
     ];
 }
 

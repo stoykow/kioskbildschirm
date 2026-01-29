@@ -28,11 +28,6 @@ $stops = [
         'name' => 'Lutherstraße',
         'url' => 'https://v6.db.transport.rest/stops/977263/departures',
     ],
-    [
-        'external_id' => '977244',
-        'name' => 'Melanchthonstraße',
-        'url' => 'https://v6.db.transport.rest/stops/977244/departures',
-    ],
 ];
 
 $pdo->beginTransaction();

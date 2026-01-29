@@ -341,6 +341,7 @@ function ensureTaskModal() {
             <div class="task-user-list"></div>
             <div class="task-modal-actions">
                 <button class="task-modal-confirm">OK</button>
+                <button class="task-modal-undone">Nicht erledigt</button>
                 <button class="task-modal-cancel">Abbrechen</button>
             </div>
         </div>
@@ -361,6 +362,12 @@ function ensureTaskModal() {
             if (selected.length > 0) {
                 markTaskDone(taskId, selected);
             }
+        }
+    });
+    modal.querySelector('.task-modal-undone').addEventListener('click', () => {
+        const taskId = parseInt(modal.getAttribute('data-task-id') || '0', 10);
+        if (taskId > 0) {
+            markTaskUndone(taskId);
         }
     });
     taskModalReady = true;
@@ -385,6 +392,9 @@ function openTaskModal(taskId) {
 
     list.innerHTML = '<div class="task-loading">Benutzer werden geladen...</div>';
     modal.classList.add('is-open');
+
+    const undoButton = modal.querySelector('.task-modal-undone');
+    undoButton.style.display = taskItem.done_by ? 'inline-flex' : 'none';
 
     fetchWasteUsers()
         .then(users => {
@@ -435,6 +445,31 @@ function markTaskDone(taskId, userIds) {
                 const added = userIds.map(id => namesById.get(id)).filter(Boolean);
                 const merged = Array.from(new Set([...existing, ...added]));
                 return { ...t, done_by: merged.join(', '), done_at: new Date().toISOString() };
+            });
+            renderCombined();
+            closeTaskModal();
+        })
+        .catch(() => {
+            closeTaskModal();
+        });
+}
+
+function markTaskUndone(taskId) {
+    fetch('aufgaben_done.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task_id: taskId, undone: true })
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (!data || !data.ok) {
+                throw new Error('Mark task undone failed');
+            }
+            tasksCache = tasksCache.map(t => {
+                if (t.id === taskId) {
+                    return { ...t, done_by: null, done_at: null };
+                }
+                return t;
             });
             renderCombined();
             closeTaskModal();

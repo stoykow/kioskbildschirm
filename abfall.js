@@ -117,7 +117,7 @@ function buildTasksSection(entries, interactive) {
         const dataAttr = interactive ? `data-task-id="${task.id}"` : '';
         const dueText = task.due ? getLabel(task.due) : 'Ohne Datum';
         const titleText = escapeHtml(decodeHtmlEntities(task.title));
-        const groupName = task.group ? escapeHtml(decodeHtmlEntities(task.group)) : 'offen';
+        const groupName = task.group ? decodeHtmlEntities(task.group) : 'offen';
         const groupText = `Zuständig: ${groupName}`;
         return `
             <div class="${rowClasses.join(' ')}" ${dataAttr}>

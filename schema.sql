@@ -102,17 +102,24 @@ CREATE TABLE IF NOT EXISTS termine_sonstige (
   hinweis TEXT NULL,
   start_time TIME NULL,
   end_time TIME NULL,
-  zustaendig_gruppe_id INT NULL,
-  erledigt_von INT NULL,
-  erledigt_am TIMESTAMP NULL,
   quelle_typ VARCHAR(32) NULL,
   quelle_datum DATE NULL,
   erstellt_am TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   aktualisiert_am TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uniq_sonst_quelle (quelle_typ, quelle_datum, titel),
-  INDEX idx_sonst_datum (datum),
-  CONSTRAINT fk_termine_sonstige_benutzer FOREIGN KEY (erledigt_von) REFERENCES benutzer(id),
-  CONSTRAINT fk_termine_sonstige_gruppe FOREIGN KEY (zustaendig_gruppe_id) REFERENCES benutzer_gruppen(id)
+  INDEX idx_sonst_datum (datum)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS termine_sonstige_zuhause (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  termin_id INT NOT NULL,
+  benutzer_id INT NOT NULL,
+  gemeldet_am TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_sonst_termin_benutzer (termin_id, benutzer_id),
+  INDEX idx_sonst_termin (termin_id),
+  INDEX idx_sonst_benutzer (benutzer_id),
+  CONSTRAINT fk_sonstige_zuhause_termin FOREIGN KEY (termin_id) REFERENCES termine_sonstige(id),
+  CONSTRAINT fk_sonstige_zuhause_benutzer FOREIGN KEY (benutzer_id) REFERENCES benutzer(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS aufgaben (

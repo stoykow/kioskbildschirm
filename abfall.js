@@ -74,14 +74,16 @@ function buildWasteSection(entries, interactive) {
         <div class="waste-title">Abfallkalender</div>
         ${upcoming.length == 0 ? '<div class="waste-row">Keine Termine im Zeitraum</div>' :
             upcoming.map(e => {
+                const isSchadstoff = String(e.summary || '').toLowerCase().startsWith('schadstoffmobil');
+                const showStatus = !isSchadstoff;
                 const rowClasses = ['waste-row'];
-                if (interactive) rowClasses.push('waste-clickable');
-                if (e.done_by) rowClasses.push('waste-done-row');
+                if (interactive && !isSchadstoff) rowClasses.push('waste-clickable');
+                if (showStatus && e.done_by) rowClasses.push('waste-done-row');
                 const statusClass = e.done_by ? 'waste-status waste-status-done' : 'waste-status waste-status-open';
                 const statusText = e.done_by ? `Erledigt: ${escapeHtml(e.done_by)}` : 'Unerledigt';
-                const doneBadge = `<span class="${statusClass}">${statusText}</span>`;
+                const doneBadge = showStatus ? `<span class="${statusClass}">${statusText}</span>` : '';
                 const time = e.start ? `<span class="waste-time">${escapeHtml(e.start)}${e.end ? ' - ' + escapeHtml(e.end) : ''}</span>` : '';
-                const dataAttr = interactive && e.id ? `data-event-id="${e.id}"` : '';
+                const dataAttr = interactive && !isSchadstoff && e.id ? `data-event-id="${e.id}"` : '';
                 return `
                     <div class="${rowClasses.join(' ')}" ${dataAttr}>
                         <span class="waste-date">${escapeHtml(getLabel(e.date))}</span>

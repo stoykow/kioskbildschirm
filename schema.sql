@@ -55,6 +55,16 @@ CREATE TABLE IF NOT EXISTS app_config (
   config_value VARCHAR(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS geraete_registrierungen (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  device_id VARCHAR(64) NOT NULL UNIQUE,
+  device_name VARCHAR(128) NOT NULL,
+  benutzer_id INT NULL,
+  erstellt_am TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_geraete_reg_benutzer (benutzer_id),
+  CONSTRAINT fk_geraete_reg_benutzer FOREIGN KEY (benutzer_id) REFERENCES benutzer(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Abfallkalender: Benutzer, Gruppen und Termine (mit Erledigt-Markierung)
 
 CREATE TABLE IF NOT EXISTS benutzer_gruppen (

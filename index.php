@@ -19,6 +19,7 @@ header("Expires: 0");
         <div id="links">
             <div id="weather">Lädt Wetterdaten...</div>
             <div id="waste">Abfallkalender...</div>
+            <div id="sonstige">Sonstige Termine...</div>
         </div>
         <div id="rechts">
             <div id="train">Lädt Zugdaten...</div>
@@ -29,6 +30,7 @@ header("Expires: 0");
 
     <script src="wetter.js?v=<?php echo time(); ?>"></script>
     <script src="abfall.js?v=<?php echo time(); ?>"></script>
+    <script src="sonstige.js?v=<?php echo time(); ?>"></script>
     <script src="aufgaben.js?v=<?php echo time(); ?>"></script>
     <script src="abfahrten.js?v=<?php echo time(); ?>"></script>
     <script src="kiosk.js?v=<?php echo time(); ?>"></script>

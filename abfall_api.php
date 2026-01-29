@@ -39,8 +39,8 @@ $stmt = $pdo->prepare(
         t.end_time,
         t.erledigt_am,
         GROUP_CONCAT(b.name ORDER BY b.name SEPARATOR ', ') AS erledigt_namen
-     FROM abfall_termine t
-     LEFT JOIN abfall_erledigt ae ON ae.termin_id = t.id
+     FROM termine_abfall t
+     LEFT JOIN termine_abfall_erledigt ae ON ae.termin_id = t.id
      LEFT JOIN benutzer b ON b.id = ae.benutzer_id
      WHERE t.datum BETWEEN :start AND :end
      GROUP BY t.id
@@ -61,3 +61,4 @@ foreach ($stmt->fetchAll() as $row) {
 }
 
 echo json_encode(['events' => $events], JSON_UNESCAPED_UNICODE);
+

@@ -74,7 +74,7 @@ try {
         }
     }
 
-    $checkEvent = $pdo->prepare("SELECT id FROM abfall_termine WHERE id = :id LIMIT 1");
+    $checkEvent = $pdo->prepare("SELECT id FROM termine_abfall WHERE id = :id LIMIT 1");
     $checkEvent->execute([':id' => $eventId]);
     if (!$checkEvent->fetch()) {
         $pdo->rollBack();
@@ -84,17 +84,17 @@ try {
     }
 
     if ($markUndone) {
-        $del = $pdo->prepare("DELETE FROM abfall_erledigt WHERE termin_id = :event_id");
+        $del = $pdo->prepare("DELETE FROM termine_abfall_erledigt WHERE termin_id = :event_id");
         $del->execute([':event_id' => $eventId]);
         $upd = $pdo->prepare(
-            "UPDATE abfall_termine
+            "UPDATE termine_abfall
              SET erledigt_von = NULL, erledigt_am = NULL
              WHERE id = :event_id"
         );
         $upd->execute([':event_id' => $eventId]);
     } else {
         $ins = $pdo->prepare(
-            "INSERT INTO abfall_erledigt (termin_id, benutzer_id)
+            "INSERT INTO termine_abfall_erledigt (termin_id, benutzer_id)
              VALUES (:event_id, :user_id)
              ON DUPLICATE KEY UPDATE erledigt_am = VALUES(erledigt_am)"
         );
@@ -102,7 +102,7 @@ try {
             $ins->execute([':event_id' => $eventId, ':user_id' => $uid]);
         }
         $upd = $pdo->prepare(
-            "UPDATE abfall_termine
+            "UPDATE termine_abfall
              SET erledigt_am = NOW()
              WHERE id = :event_id"
         );
@@ -118,3 +118,4 @@ try {
     http_response_code(500);
     echo json_encode(['error' => 'DB Fehler']);
 }
+

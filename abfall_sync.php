@@ -55,7 +55,7 @@ foreach ($lines as $line) {
 }
 
 $upsert = $pdo->prepare(
-    "INSERT INTO abfall_termine (uid, datum, summary, start_time, end_time)
+    "INSERT INTO termine_abfall (uid, datum, summary, start_time, end_time)
      VALUES (:uid, :datum, :summary, :start_time, :end_time)
      ON DUPLICATE KEY UPDATE
        datum = VALUES(datum),
@@ -157,7 +157,7 @@ try {
     }
 
     $cutoff = (new DateTimeImmutable('today'))->modify('-30 days')->format('Y-m-d');
-    $cleanup = $pdo->prepare("DELETE FROM abfall_termine WHERE datum < :cutoff");
+    $cleanup = $pdo->prepare("DELETE FROM termine_abfall WHERE datum < :cutoff");
     $cleanup->execute([':cutoff' => $cutoff]);
 
     $pdo->commit();
@@ -167,3 +167,4 @@ try {
     http_response_code(500);
     echo "Error: " . $e->getMessage() . "\n";
 }
+

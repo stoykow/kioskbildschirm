@@ -55,7 +55,7 @@ async function fetchTrams() {
         }
 
         tramDiv.innerHTML = `
-            <div class="train-title">Tram ab Bahnhof</div>
+            <div class="train-title">Tram ab Lutherstraße</div>
             ` + departures.slice(0, 4).map(dep => {
             const time = dep.anzeige_zeit || new Date(dep.tatsaechliche_zeit || dep.geplante_zeit).toLocaleTimeString('de-DE', {
                 hour: '2-digit',

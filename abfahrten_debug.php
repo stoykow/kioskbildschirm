@@ -47,8 +47,8 @@ $sql = "SELECT
             l.produkt,
             h.name AS haltestelle
         FROM abfahrten a
-        JOIN haltestellen h ON h.id = a.haltestelle_id
-        JOIN linien l ON l.id = a.linie_id";
+        JOIN abfahrten_haltestellen h ON h.id = a.haltestelle_id
+        JOIN abfahrten_linien l ON l.id = a.linie_id";
 
 $params = [];
 if ($stop !== '') {

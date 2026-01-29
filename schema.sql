@@ -1,12 +1,12 @@
 -- MariaDB schema for departures cache
 
-CREATE TABLE IF NOT EXISTS haltestellen (
+CREATE TABLE IF NOT EXISTS abfahrten_haltestellen (
   id INT AUTO_INCREMENT PRIMARY KEY,
   externe_id VARCHAR(32) NOT NULL UNIQUE,
   name VARCHAR(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS linien (
+CREATE TABLE IF NOT EXISTS abfahrten_linien (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(64) NOT NULL UNIQUE,
   modus VARCHAR(32) NULL,
@@ -27,8 +27,8 @@ CREATE TABLE IF NOT EXISTS abfahrten (
   erstellt_am TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uniq_departure (haltestelle_id, linie_id, geplante_zeit, richtung, gleis),
   INDEX idx_stop_when (haltestelle_id, geplante_zeit),
-  CONSTRAINT fk_abfahrten_haltestellen FOREIGN KEY (haltestelle_id) REFERENCES haltestellen(id),
-  CONSTRAINT fk_abfahrten_linien FOREIGN KEY (linie_id) REFERENCES linien(id)
+  CONSTRAINT fk_abfahrten_haltestellen FOREIGN KEY (haltestelle_id) REFERENCES abfahrten_haltestellen(id),
+  CONSTRAINT fk_abfahrten_linien FOREIGN KEY (linie_id) REFERENCES abfahrten_linien(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS geraete (

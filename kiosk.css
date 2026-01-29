@@ -136,6 +136,13 @@ body {
     letter-spacing: 0.04em;
 }
 
+.waste-title {
+    font-size: clamp(1.05rem, 1.2vw + 0.3vh, 1.6rem);
+    font-weight: 700;
+    margin: 0.9rem 0 0.5rem;
+    letter-spacing: 0.03em;
+}
+
 .weather-row, .waste-row {
     display: flex;
     justify-content: space-between;
@@ -152,6 +159,21 @@ body {
 .waste-row {
     flex-wrap: wrap;
     align-items: center;
+}
+
+.waste-date {
+    font-weight: 500;
+    color: #fff;
+}
+
+.waste-type {
+    font-weight: 600;
+    color: #fff;
+}
+
+.waste-time {
+    font-weight: 400;
+    color: #aaa;
 }
 
 .waste-clickable {

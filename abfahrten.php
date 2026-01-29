@@ -35,19 +35,19 @@ if ($limit < 1 || $limit > 50) {
 
 $now = (new DateTimeImmutable('now', new DateTimeZone('Europe/Berlin')))->format('Y-m-d H:i:s');
 
-$stopName = null;
+$stopExternalId = null;
 $modeCondition = '1=1';
 switch ($type) {
     case 'zug':
-        $stopName = 'Görlitz Hbf';
+        $stopExternalId = '8010131';
         $modeCondition = "(l.name LIKE 'RB%' OR l.name LIKE 'RE%')";
         break;
     case 'tram':
-        $stopName = 'Görlitz Hbf';
+        $stopExternalId = '8010131';
         $modeCondition = "l.produkt = 'tram'";
         break;
     case 'bus':
-        $stopName = 'Görlitz Hbf';
+        $stopExternalId = '8010131';
         $modeCondition = "l.produkt = 'bus'";
         break;
     default:
@@ -69,13 +69,13 @@ $stmt = $pdo->prepare(
      FROM abfahrten a
      JOIN abfahrten_haltestellen h ON h.id = a.haltestelle_id
      JOIN abfahrten_linien l ON l.id = a.linie_id
-     WHERE h.name = :stop_name
+     WHERE h.externe_id = :stop_id
        AND {$modeCondition}
        AND COALESCE(a.tatsaechliche_zeit, a.geplante_zeit) >= :now_time
      ORDER BY a.geplante_zeit ASC
      LIMIT :limit"
 );
-$stmt->bindValue(':stop_name', $stopName, PDO::PARAM_STR);
+$stmt->bindValue(':stop_id', $stopExternalId, PDO::PARAM_STR);
 $stmt->bindValue(':now_time', $now, PDO::PARAM_STR);
 $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
 $stmt->execute();

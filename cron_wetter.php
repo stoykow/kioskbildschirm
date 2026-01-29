@@ -70,6 +70,16 @@ $insert = $pdo->prepare(
       :regen_1h_mm, :schnee_1h_mm, :wetter_main, :wetter_beschreibung, :payload_json)"
 );
 
+$taskUpsert = $pdo->prepare(
+    "INSERT INTO aufgaben (titel, details, faellig_am, gruppe_id, quelle_typ, quelle_datum)
+     VALUES (:titel, :details, :faellig_am, :gruppe_id, :quelle_typ, :quelle_datum)
+     ON DUPLICATE KEY UPDATE
+       titel = VALUES(titel),
+       details = VALUES(details),
+       faellig_am = VALUES(faellig_am),
+       gruppe_id = VALUES(gruppe_id)"
+);
+
 $insert->execute([
     ':temperatur_c' => $main['temp'] ?? null,
     ':gefuehlt_c' => $main['feels_like'] ?? null,
@@ -84,5 +94,62 @@ $insert->execute([
     ':wetter_beschreibung' => $weather0['description'] ?? null,
     ':payload_json' => $json,
 ]);
+
+// Forecast: pruefen, ob in der kommenden Nacht Schnee faellt (naechste 36h)
+$forecastUrl = "https://api.openweathermap.org/data/2.5/forecast?lat={$lat}&lon={$lon}&appid={$apiKey}&lang={$lang}&units={$units}";
+$forecastJson = @file_get_contents($forecastUrl, false, $context);
+if ($forecastJson !== false) {
+    $forecast = json_decode($forecastJson, true);
+    if (is_array($forecast) && is_array($forecast['list'] ?? null)) {
+        $tzOffset = (int)($forecast['city']['timezone'] ?? 0); // Sekunden
+        $nowTs = time();
+        $maxLead = 36 * 3600;
+        $snowDueDate = null;
+        $snowLocalTs = null;
+
+        foreach ($forecast['list'] as $item) {
+            $dt = $item['dt'] ?? null;
+            if (!$dt || $dt < $nowTs || ($dt - $nowTs) > $maxLead) {
+                continue;
+            }
+            $snow = 0.0;
+            if (isset($item['snow']['3h'])) {
+                $snow = (float)$item['snow']['3h'];
+            } elseif (isset($item['snow']['1h'])) {
+                $snow = (float)$item['snow']['1h'];
+            }
+            if ($snow <= 0) {
+                continue;
+            }
+            $localTs = $dt + $tzOffset;
+            $hour = (int)gmdate('G', $localTs);
+            if (!($hour >= 18 || $hour < 6)) {
+                continue;
+            }
+            $snowLocalTs = $localTs;
+            $dueDate = gmdate('Y-m-d', $localTs);
+            if ($hour >= 18) {
+                $dueDate = gmdate('Y-m-d', $localTs + 86400);
+            }
+            $snowDueDate = $dueDate;
+            break;
+        }
+
+        if ($snowDueDate) {
+            $whenText = $snowLocalTs ? gmdate('Y-m-d H:i', $snowLocalTs) : '';
+            $details = $whenText !== ''
+                ? "Schneefall erwartet (Prognose {$whenText})"
+                : "Schneefall erwartet (Prognose)";
+            $taskUpsert->execute([
+                ':titel' => 'Schnee schieben',
+                ':details' => $details,
+                ':faellig_am' => $snowDueDate,
+                ':gruppe_id' => null,
+                ':quelle_typ' => 'schnee',
+                ':quelle_datum' => $snowDueDate,
+            ]);
+        }
+    }
+}
 
 echo "OK\n";

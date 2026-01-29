@@ -40,7 +40,7 @@ $modeCondition = '1=1';
 switch ($type) {
     case 'zug':
         $stopExternalId = '8010131';
-        $modeCondition = "(l.name LIKE 'RB%' OR l.name LIKE 'RE%')";
+        $modeCondition = "(l.modus = 'train' AND (l.produkt IS NULL OR l.produkt <> 'tram'))";
         break;
     case 'tram':
         $stopExternalId = '8010131';

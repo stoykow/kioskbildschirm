@@ -33,8 +33,8 @@ if ($limit < 1 || $limit > 500) {
     $limit = 50;
 }
 
-$stop = $_GET['stop'] ?? '';
-$stop = trim($stop);
+$stop = trim($_GET['stop'] ?? '');
+$stopId = trim($_GET['stop_id'] ?? '');
 
 $sql = "SELECT
             a.geplante_zeit,
@@ -51,7 +51,10 @@ $sql = "SELECT
         JOIN abfahrten_linien l ON l.id = a.linie_id";
 
 $params = [];
-if ($stop !== '') {
+if ($stopId !== '') {
+    $sql .= " WHERE h.externe_id = :stop_id";
+    $params[':stop_id'] = $stopId;
+} elseif ($stop !== '') {
     $sql .= " WHERE h.name = :stop_name";
     $params[':stop_name'] = $stop;
 }

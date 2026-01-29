@@ -195,6 +195,10 @@ body {
     margin-bottom: 0.25rem;
 }
 
+.task-row-done {
+    opacity: 0.7;
+}
+
 .task-clickable {
     cursor: pointer;
 }
@@ -207,6 +211,19 @@ body {
 .task-meta {
     font-weight: 400;
     color: #aaa;
+}
+
+.task-status {
+    font-size: 0.9em;
+    font-weight: 600;
+}
+
+.task-status-done {
+    color: #7fe6a3;
+}
+
+.task-status-open {
+    color: #ff7a7a;
 }
 
 #waste-modal {
@@ -345,6 +362,11 @@ body {
     font-size: 1rem;
 }
 
+.task-user-button.is-selected {
+    border-color: rgba(127, 230, 163, 0.8);
+    box-shadow: 0 0 0 2px rgba(127, 230, 163, 0.2);
+}
+
 .task-user-button:active {
     transform: scale(0.98);
 }
@@ -352,10 +374,20 @@ body {
 .task-modal-actions {
     display: flex;
     justify-content: flex-end;
+    gap: 0.6rem;
     margin-top: 1rem;
 }
 
 .task-modal-cancel {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 0.6rem;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.95rem;
+}
+
+.task-modal-confirm {
     background: rgba(255,255,255,0.12);
     color: #fff;
     border: 1px solid rgba(255,255,255,0.16);

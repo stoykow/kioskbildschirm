@@ -24,10 +24,11 @@ if (!is_array($data)) {
 
 $eventId = isset($data['event_id']) ? (int)$data['event_id'] : 0;
 $userId = isset($data['user_id']) ? (int)$data['user_id'] : 0;
+$markUndone = !empty($data['undone']);
 
-if ($eventId <= 0 || $userId <= 0) {
+if ($eventId <= 0 || (!$markUndone && $userId <= 0)) {
     http_response_code(400);
-    echo json_encode(['error' => 'event_id und user_id erforderlich']);
+    echo json_encode(['error' => 'event_id erforderlich (und user_id zum Erledigen)']);
     exit;
 }
 
@@ -47,13 +48,15 @@ try {
 try {
     $pdo->beginTransaction();
 
-    $checkUser = $pdo->prepare("SELECT id FROM benutzer WHERE id = :id AND aktiv = 1 LIMIT 1");
-    $checkUser->execute([':id' => $userId]);
-    if (!$checkUser->fetch()) {
-        $pdo->rollBack();
-        http_response_code(400);
-        echo json_encode(['error' => 'Unbekannter Benutzer']);
-        exit;
+    if (!$markUndone) {
+        $checkUser = $pdo->prepare("SELECT id FROM benutzer WHERE id = :id AND aktiv = 1 LIMIT 1");
+        $checkUser->execute([':id' => $userId]);
+        if (!$checkUser->fetch()) {
+            $pdo->rollBack();
+            http_response_code(400);
+            echo json_encode(['error' => 'Unbekannter Benutzer']);
+            exit;
+        }
     }
 
     $checkEvent = $pdo->prepare("SELECT id FROM abfall_termine WHERE id = :id LIMIT 1");
@@ -65,12 +68,21 @@ try {
         exit;
     }
 
-    $upd = $pdo->prepare(
-        "UPDATE abfall_termine
-         SET erledigt_von = :user_id, erledigt_am = NOW()
-         WHERE id = :event_id"
-    );
-    $upd->execute([':user_id' => $userId, ':event_id' => $eventId]);
+    if ($markUndone) {
+        $upd = $pdo->prepare(
+            "UPDATE abfall_termine
+             SET erledigt_von = NULL, erledigt_am = NULL
+             WHERE id = :event_id"
+        );
+        $upd->execute([':event_id' => $eventId]);
+    } else {
+        $upd = $pdo->prepare(
+            "UPDATE abfall_termine
+             SET erledigt_von = :user_id, erledigt_am = NOW()
+             WHERE id = :event_id"
+        );
+        $upd->execute([':user_id' => $userId, ':event_id' => $eventId]);
+    }
 
     $pdo->commit();
     echo json_encode(['ok' => true]);

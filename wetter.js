@@ -97,7 +97,10 @@ async function fetchWeather() {
             `<div class="weather-row">
                 <span class="weather-label">Druck / Dosis:</span>
                 <span class="weather-value">${pressText} / ${dosisText}</span>
-                <span class="weather-value weather-status ${tuerInfo.className}">Haustür: ${tuerInfo.label}</span>
+            </div>` +
+            `<div class="weather-row">
+                <span class="weather-label">Haustür:</span>
+                <span class="weather-value weather-status ${tuerInfo.className}">${tuerInfo.label}</span>
             </div>`;
     } catch (error) {
         document.getElementById('weather').textContent = 'Fehler beim Laden der HA-Daten';

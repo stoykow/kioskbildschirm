@@ -4,18 +4,27 @@
     box-sizing: border-box;
 }
 
+:root {
+    --text-strong: #e0e0e0;
+    --text: #cfcfcf;
+    --text-dim: #b8b8b8;
+    --text-muted: #9a9a9a;
+    --accent-green: #7fe6a3;
+    --accent-red: #ff7a7a;
+}
+
 body {
     background-color: #000;
-    color: #fff;
+    color: var(--text);
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
     align-items: center;
     min-height: 100vh;
     height: auto;
-    font-size: clamp(12px, 1.1vw + 0.6vh, 22px);
+    font-size: clamp(11px, 1vw + 0.5vh, 20px);
     margin: 0;
-    padding: clamp(0.6rem, 1.2vw, 1.4rem) 0;
+    padding: clamp(0.4rem, 0.9vw, 1.1rem) 0;
     cursor: none;
     font-family: 'Segoe UI', 'Arial', sans-serif;
     overflow-x: hidden;
@@ -31,12 +40,12 @@ body {
     width: min(46vw, 900px);
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.3rem;
     align-items: stretch;
     background: rgba(255,255,255,0.04);
     border-radius: 1rem;
     box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-    padding: clamp(0.8rem, 1.3vw, 1.6rem);
+    padding: clamp(0.6rem, 1.1vw, 1.2rem);
 }
 
 #weather, #waste, #sonstige, #train, #tram, #bus {
@@ -47,7 +56,7 @@ body {
 #main-flex {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: clamp(1rem, 2vw, 2.5rem);
+    gap: clamp(0.8rem, 1.6vw, 2.1rem);
     justify-content: center;
     align-items: start;
     width: min(96vw, 1800px);
@@ -61,11 +70,11 @@ body {
 }
 
 .train-title {
-    font-size: clamp(1.1rem, 1.4vw + 0.3vh, 1.8rem);
+    font-size: clamp(1rem, 1.25vw + 0.25vh, 1.6rem);
     font-weight: 700;
-    margin-bottom: 0.6rem;
+    margin-bottom: 0.5rem;
     letter-spacing: 0.04em;
-    color: #c2c2c2;
+    color: var(--text-strong);
 }
 
 .train-row {
@@ -76,9 +85,9 @@ body {
     width: 100%;
     background: rgba(255,255,255,0.07);
     border-radius: 0.7rem;
-    padding: 0.6rem 1rem;
-    font-size: clamp(0.95rem, 0.8vw + 0.2vh, 1.3rem);
-    margin-bottom: 0.25rem;
+    padding: 0.5rem 0.9rem;
+    font-size: clamp(0.9rem, 0.75vw + 0.2vh, 1.2rem);
+    margin-bottom: 0.2rem;
 }
 .tram-row,
 .bus-row {
@@ -89,22 +98,22 @@ body {
     width: 100%;
     background: rgba(255,255,255,0.07);
     border-radius: 0.7rem;
-    padding: 0.6rem 1rem;
-    font-size: clamp(0.95rem, 0.8vw + 0.2vh, 1.3rem);
-    margin-bottom: 0.25rem;
+    padding: 0.5rem 0.9rem;
+    font-size: clamp(0.9rem, 0.75vw + 0.2vh, 1.2rem);
+    margin-bottom: 0.2rem;
 }
 
 .train-time {
     font-weight: 500;
-    color: #c2c2c2;
+    color: var(--text-dim);
 }
 .train-line {
     font-weight: 400;
-    color: #aaa;
+    color: var(--text-muted);
 }
 .train-direction {
     font-weight: 500;
-    color: #fff;
+    color: var(--text-strong);
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -112,31 +121,31 @@ body {
 }
 .train-platform {
     font-weight: 400;
-    color: #aaa;
+    color: var(--text-muted);
 }
 .train-label {
     font-weight: 400;
-    color: #aaa;
+    color: var(--text-muted);
 }
 .train-value {
     font-weight: 500;
-    color: #fff;
+    color: var(--text-strong);
 }
 
 .weather-title {
-    font-size: clamp(1.1rem, 1.4vw + 0.3vh, 1.8rem);
+    font-size: clamp(1rem, 1.25vw + 0.25vh, 1.6rem);
     font-weight: 700;
-    margin-bottom: 0.6rem;
+    margin-bottom: 0.5rem;
     letter-spacing: 0.04em;
-    color: #c2c2c2;
+    color: var(--text-strong);
 }
 
 .waste-title {
-    font-size: clamp(1.05rem, 1.2vw + 0.3vh, 1.6rem);
+    font-size: clamp(0.95rem, 1.1vw + 0.25vh, 1.45rem);
     font-weight: 700;
-    margin: 0.9rem 0 0.5rem;
+    margin: 0.7rem 0 0.4rem;
     letter-spacing: 0.03em;
-    color: #c2c2c2;
+    color: var(--text-strong);
 }
 
 .weather-row, .waste-row {
@@ -146,9 +155,9 @@ body {
     width: 100%;
     background: rgba(255,255,255,0.07);
     border-radius: 0.7rem;
-    padding: 0.6rem 1rem;
-    font-size: clamp(1rem, 1vw + 0.2vh, 1.6rem);
-    margin-bottom: 0.25rem;
+    padding: 0.5rem 0.9rem;
+    font-size: clamp(0.95rem, 0.9vw + 0.2vh, 1.45rem);
+    margin-bottom: 0.2rem;
 
 }
 
@@ -159,31 +168,31 @@ body {
 
 .waste-date {
     font-weight: 500;
-    color: #c2c2c2;
+    color: var(--text);
 }
 
 .waste-type {
     font-weight: 600;
-    color: #fff;
+    color: var(--text-strong);
 }
 
 .waste-time {
     font-weight: 400;
-    color: #b0b0b0;
+    color: var(--text-muted);
 }
 
 .waste-row-muted .waste-date,
 .waste-row-muted .waste-type,
 .waste-row-muted .waste-time {
-    color: #c2c2c2;
+    color: var(--text-dim);
 }
 
 .sonstige-title {
-    font-size: clamp(1.05rem, 1.2vw + 0.3vh, 1.6rem);
+    font-size: clamp(0.95rem, 1.1vw + 0.25vh, 1.45rem);
     font-weight: 700;
-    margin: 0.9rem 0 0.5rem;
+    margin: 0.7rem 0 0.4rem;
     letter-spacing: 0.03em;
-    color: #c2c2c2;
+    color: var(--text-strong);
 }
 
 .sonstige-row {
@@ -193,9 +202,9 @@ body {
     width: 100%;
     background: rgba(255,255,255,0.07);
     border-radius: 0.7rem;
-    padding: 0.6rem 1rem;
-    font-size: clamp(1rem, 1vw + 0.2vh, 1.6rem);
-    margin-bottom: 0.25rem;
+    padding: 0.5rem 0.9rem;
+    font-size: clamp(0.95rem, 0.9vw + 0.2vh, 1.45rem);
+    margin-bottom: 0.2rem;
     flex-wrap: wrap;
     align-items: center;
 }
@@ -206,33 +215,33 @@ body {
 
 .sonstige-date {
     font-weight: 500;
-    color: #c2c2c2;
+    color: var(--text);
 }
 
 .sonstige-type {
     font-weight: 600;
-    color: #fff;
+    color: var(--text-strong);
 }
 
 .sonstige-hint {
     font-weight: 400;
-    color: #aaa;
+    color: var(--text-muted);
 }
 
 .sonstige-time {
     font-weight: 400;
-    color: #b0b0b0;
+    color: var(--text-muted);
 }
 
 .sonstige-status {
     font-size: 0.9em;
     font-weight: 600;
     margin-left: auto;
-    color: #7fe6a3;
+    color: var(--accent-green);
 }
 
 .sonstige-status-warn {
-    color: #ff7a7a;
+    color: var(--accent-red);
 }
 
 .waste-clickable {
@@ -250,19 +259,19 @@ body {
 }
 
 .waste-status-done {
-    color: #7fe6a3;
+    color: var(--accent-green);
 }
 
 .waste-status-open {
-    color: #ff7a7a;
+    color: var(--accent-red);
 }
 
 .task-title {
-    font-size: clamp(1.05rem, 1.2vw + 0.3vh, 1.6rem);
+    font-size: clamp(0.95rem, 1.1vw + 0.25vh, 1.45rem);
     font-weight: 700;
-    margin: 0.9rem 0 0.5rem;
+    margin: 0.7rem 0 0.4rem;
     letter-spacing: 0.03em;
-    color: #c2c2c2;
+    color: var(--text-strong);
 }
 
 .task-row {
@@ -270,9 +279,9 @@ body {
     width: 100%;
     background: rgba(255,255,255,0.07);
     border-radius: 0.7rem;
-    padding: 0.6rem 1rem;
-    font-size: clamp(1rem, 1vw + 0.2vh, 1.6rem);
-    margin-bottom: 0.25rem;
+    padding: 0.5rem 0.9rem;
+    font-size: clamp(0.95rem, 0.9vw + 0.2vh, 1.45rem);
+    margin-bottom: 0.2rem;
 }
 
 .task-row-done {
@@ -292,17 +301,17 @@ body {
 
 .task-date {
     font-weight: 500;
-    color: #c2c2c2;
+    color: var(--text);
 }
 
 .task-name {
     font-weight: 600;
-    color: #fff;
+    color: var(--text-strong);
 }
 
 .task-group {
     font-weight: 400;
-    color: #aaa;
+    color: var(--text-muted);
 }
 
 .task-status {
@@ -312,11 +321,11 @@ body {
 }
 
 .task-status-done {
-    color: #7fe6a3;
+    color: var(--accent-green);
 }
 
 .task-status-open {
-    color: #ff7a7a;
+    color: var(--accent-red);
 }
 
 #waste-modal {
@@ -612,7 +621,7 @@ body {
 
 .weather-label {
     font-weight: 400;
-    color: #aaa;
+    color: var(--text-muted);
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -620,7 +629,7 @@ body {
 }
 .weather-value {
     font-weight: 500;
-    color: #fff;
+    color: var(--text-strong);
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -636,16 +645,16 @@ body {
 }
 
 .weather-status-time {
-    font-weight: 400;
-    color: #c2c2c2;
+    font-weight: 500;
+    color: var(--text-strong);
 }
 
 .weather-status-open {
-    color: #ff7a7a;
+    color: var(--accent-red);
 }
 
 .weather-status-closed {
-    color: #7fe6a3;
+    color: var(--accent-green);
 }
 
 @media (max-width: 1200px) {

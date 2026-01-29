@@ -411,6 +411,98 @@ body {
     padding: 0.4rem 0;
 }
 
+#sonstige-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.72);
+    z-index: 1000;
+}
+
+#sonstige-modal.is-open {
+    display: flex;
+}
+
+.sonstige-modal-card {
+    background: #111;
+    border-radius: 1rem;
+    padding: 1.2rem 1.4rem;
+    width: min(86vw, 620px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+.sonstige-modal-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+}
+
+.sonstige-modal-sub {
+    color: #bbb;
+    font-size: 0.95rem;
+}
+
+.sonstige-user-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.6rem;
+    margin-top: 1rem;
+}
+
+.sonstige-user-button {
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 0.7rem;
+    padding: 0.6rem 0.8rem;
+    font-size: 1rem;
+}
+
+.sonstige-user-button.is-selected {
+    border-color: rgba(127, 230, 163, 0.8);
+    box-shadow: 0 0 0 2px rgba(127, 230, 163, 0.2);
+}
+
+.sonstige-user-button:active {
+    transform: scale(0.98);
+}
+
+.sonstige-modal-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    justify-content: flex-end;
+    margin-top: 1rem;
+}
+
+.sonstige-modal-cancel,
+.sonstige-modal-clear,
+.sonstige-modal-confirm {
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    border-radius: 0.6rem;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.95rem;
+}
+
+.sonstige-modal-clear {
+    color: #ff7a7a;
+}
+
+.sonstige-modal-confirm {
+    color: #7fe6a3;
+}
+
+.sonstige-loading {
+    color: #bbb;
+    font-size: 0.95rem;
+    padding: 0.4rem 0;
+}
+
 #task-modal {
     position: fixed;
     inset: 0;
@@ -578,11 +670,11 @@ body {
         width: 100%;
     }
     
-    .weather-title, .train-title {
+    .weather-title, .train-title, .sonstige-title {
         margin-bottom: 0.5rem;
     }
     
-    .weather-row, .waste-row {
+    .weather-row, .waste-row, .sonstige-row {
         padding: 0.5rem 0.8rem;
         flex-direction: column;
         align-items: flex-start;

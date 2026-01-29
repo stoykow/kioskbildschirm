@@ -149,6 +149,101 @@ body {
 
 }
 
+.waste-row {
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.waste-clickable {
+    cursor: pointer;
+}
+
+.waste-done-row {
+    opacity: 0.65;
+}
+
+.waste-done {
+    font-size: 0.9em;
+    color: #7fe6a3;
+    margin-left: auto;
+}
+
+#waste-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.72);
+    z-index: 1000;
+}
+
+#waste-modal.is-open {
+    display: flex;
+}
+
+.waste-modal-card {
+    background: #111;
+    border-radius: 1rem;
+    padding: 1.2rem 1.4rem;
+    width: min(86vw, 620px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+.waste-modal-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+}
+
+.waste-modal-sub {
+    color: #bbb;
+    font-size: 0.95rem;
+}
+
+.waste-user-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.6rem;
+    margin-top: 1rem;
+}
+
+.waste-user-button {
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 0.7rem;
+    padding: 0.6rem 0.8rem;
+    font-size: 1rem;
+}
+
+.waste-user-button:active {
+    transform: scale(0.98);
+}
+
+.waste-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1rem;
+}
+
+.waste-modal-cancel {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 0.6rem;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.95rem;
+}
+
+.waste-loading,
+.waste-done-info {
+    color: #bbb;
+    font-size: 0.95rem;
+    padding: 0.4rem 0;
+}
+
 .weather-label {
     font-weight: 400;
     color: #aaa;

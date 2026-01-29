@@ -34,7 +34,7 @@ switch ($type) {
         $modeCondition = "(l.modus = 'train' AND (l.produkt IS NULL OR l.produkt <> 'tram'))";
         break;
     case 'tram':
-        $stopExternalId = '8010131';
+        $stopExternalId = '977263';
         $modeCondition = "l.produkt = 'tram'";
         break;
     case 'bus':

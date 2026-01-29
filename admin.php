@@ -29,12 +29,6 @@ if ($action === 'config_save') {
         );
         $stmt->execute([':k' => $key, ':v' => $value]);
     }
-} elseif ($action === 'config_delete') {
-    $key = trim($_POST['config_key'] ?? '');
-    if ($key !== '') {
-        $stmt = $pdo->prepare("DELETE FROM app_config WHERE config_key = :k");
-        $stmt->execute([':k' => $key]);
-    }
 } elseif ($action === 'termin_save') {
     $id = (int)($_POST['id'] ?? 0);
     $datum = trim($_POST['datum'] ?? '');
@@ -169,24 +163,16 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
                 <tr>
                     <th>Key</th>
                     <th>Value</th>
-                    <th>Aktion</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (count($configRows) === 0): ?>
-                    <tr><td colspan="3">Keine Einträge</td></tr>
+                    <tr><td colspan="2">Keine Einträge</td></tr>
                 <?php else: ?>
                     <?php foreach ($configRows as $row): ?>
                         <tr>
                             <td><?php echo h($row['config_key']); ?></td>
                             <td><?php echo h($row['config_value']); ?></td>
-                            <td>
-                                <form method="post" style="display:inline;">
-                                    <input type="hidden" name="action" value="config_delete">
-                                    <input type="hidden" name="config_key" value="<?php echo h($row['config_key']); ?>">
-                                    <button type="submit" class="danger">Löschen</button>
-                                </form>
-                            </td>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>

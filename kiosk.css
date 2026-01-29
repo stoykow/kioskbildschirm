@@ -276,6 +276,11 @@ body {
     font-size: 1rem;
 }
 
+.waste-user-button.is-selected {
+    border-color: rgba(127, 230, 163, 0.8);
+    box-shadow: 0 0 0 2px rgba(127, 230, 163, 0.2);
+}
+
 .waste-user-button:active {
     transform: scale(0.98);
 }
@@ -288,6 +293,15 @@ body {
 }
 
 .waste-modal-cancel {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 0.6rem;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.95rem;
+}
+
+.waste-modal-confirm {
     background: rgba(255,255,255,0.12);
     color: #fff;
     border: 1px solid rgba(255,255,255,0.16);

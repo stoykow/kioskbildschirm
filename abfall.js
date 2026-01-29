@@ -172,6 +172,7 @@ function ensureWasteModal() {
             <div class="waste-modal-sub"></div>
             <div class="waste-user-list"></div>
             <div class="waste-modal-actions">
+                <button class="waste-modal-confirm">OK</button>
                 <button class="waste-modal-undone">Nicht erledigt</button>
                 <button class="waste-modal-cancel">Abbrechen</button>
             </div>
@@ -188,6 +189,17 @@ function ensureWasteModal() {
         const eventId = parseInt(modal.getAttribute('data-event-id') || '0', 10);
         if (eventId > 0) {
             markWasteUndone(eventId);
+        }
+    });
+    modal.querySelector('.waste-modal-confirm').addEventListener('click', () => {
+        const eventId = parseInt(modal.getAttribute('data-event-id') || '0', 10);
+        if (eventId > 0) {
+            const selected = Array.from(modal.querySelectorAll('.waste-user-button.is-selected'))
+                .map(btn => parseInt(btn.getAttribute('data-user-id') || '0', 10))
+                .filter(id => id > 0);
+            if (selected.length > 0) {
+                markWasteDone(eventId, selected);
+            }
         }
     });
     wasteModalReady = true;
@@ -228,7 +240,10 @@ function openWasteModal(eventId) {
                 const btn = document.createElement('button');
                 btn.className = 'waste-user-button';
                 btn.textContent = user.name;
-                btn.addEventListener('click', () => markWasteDone(eventItem.id, user));
+                btn.setAttribute('data-user-id', String(user.id));
+                btn.addEventListener('click', () => {
+                    btn.classList.toggle('is-selected');
+                });
                 list.appendChild(btn);
             });
             if (eventItem.done_by) {
@@ -251,22 +266,24 @@ function closeWasteModal() {
     }
 }
 
-function markWasteDone(eventId, user) {
+function markWasteDone(eventId, userIds) {
     fetch('abfall_done.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ event_id: eventId, user_id: user.id })
+        body: JSON.stringify({ event_id: eventId, user_ids: userIds })
     })
         .then(response => response.json())
         .then(data => {
             if (!data || !data.ok) {
                 throw new Error('Mark done failed');
             }
+            const namesById = new Map((wasteUsersCache || []).map(u => [u.id, u.name]));
             wasteEventsCache = wasteEventsCache.map(e => {
-                if (e.id === eventId) {
-                    return { ...e, done_by: user.name, done_at: new Date().toISOString() };
-                }
-                return e;
+                if (e.id !== eventId) return e;
+                const existing = (e.done_by ? String(e.done_by).split(',').map(s => s.trim()) : []);
+                const added = userIds.map(id => namesById.get(id)).filter(Boolean);
+                const merged = Array.from(new Set([...existing, ...added]));
+                return { ...e, done_by: merged.join(', '), done_at: new Date().toISOString() };
             });
             renderCombined();
             closeWasteModal();

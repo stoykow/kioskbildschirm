@@ -17,6 +17,13 @@ function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
+function decodeHtmlEntities(value) {
+    if (value === null || value === undefined) return '';
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = String(value);
+    return textarea.value;
+}
+
 function getLabel(dateStr) {
     const d = new Date(dateStr);
     d.setHours(0, 0, 0, 0);
@@ -109,10 +116,12 @@ function buildTasksSection(entries, interactive) {
         if (interactive) rowClasses.push('task-clickable');
         const dataAttr = interactive ? `data-task-id="${task.id}"` : '';
         const dueText = task.due ? getLabel(task.due) : 'Ohne Datum';
-        const groupText = task.group ? `Zustaendig: ${escapeHtml(task.group)}` : 'Zustaendig: offen';
+        const titleText = escapeHtml(decodeHtmlEntities(task.title));
+        const groupName = task.group ? escapeHtml(decodeHtmlEntities(task.group)) : 'offen';
+        const groupText = `Zustaendig: ${groupName}`;
         return `
             <div class="${rowClasses.join(' ')}" ${dataAttr}>
-                <span class="task-name">${escapeHtml(task.title)}</span>
+                <span class="task-name">${titleText}</span>
                 <span class="task-meta">${escapeHtml(dueText)} - ${escapeHtml(groupText)}</span>
             </div>
         `;

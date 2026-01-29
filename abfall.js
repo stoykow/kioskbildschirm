@@ -118,7 +118,7 @@ function buildTasksSection(entries, interactive) {
         const dueText = task.due ? getLabel(task.due) : 'Ohne Datum';
         const titleText = escapeHtml(decodeHtmlEntities(task.title));
         const groupName = task.group ? escapeHtml(decodeHtmlEntities(task.group)) : 'offen';
-        const groupText = `Zustaendig: ${groupName}`;
+        const groupText = `Zuständig: ${groupName}`;
         return `
             <div class="${rowClasses.join(' ')}" ${dataAttr}>
                 <span class="task-name">${titleText}</span>

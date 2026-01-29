@@ -28,12 +28,21 @@ try {
 }
 
 $stmt = $pdo->prepare(
-    "SELECT a.id, a.titel, a.details, a.faellig_am, g.name AS gruppe_name
+    "SELECT
+        a.id,
+        a.titel,
+        a.details,
+        a.faellig_am,
+        g.name AS gruppe_name,
+        a.erledigt_am,
+        GROUP_CONCAT(b.name ORDER BY b.name SEPARATOR ', ') AS erledigt_namen
      FROM aufgaben a
      LEFT JOIN benutzer_gruppen g ON g.id = a.gruppe_id
-     WHERE a.erledigt_am IS NULL
-     ORDER BY (a.faellig_am IS NULL) ASC, a.faellig_am ASC, a.id ASC
-     LIMIT 6"
+     LEFT JOIN aufgaben_erledigt ae ON ae.aufgabe_id = a.id
+     LEFT JOIN benutzer b ON b.id = ae.benutzer_id
+     GROUP BY a.id
+     ORDER BY (a.erledigt_am IS NULL) DESC, (a.faellig_am IS NULL) ASC, a.faellig_am ASC, a.id ASC
+     LIMIT 8"
 );
 $stmt->execute();
 
@@ -45,6 +54,8 @@ foreach ($stmt->fetchAll() as $row) {
         'details' => $row['details'],
         'due' => $row['faellig_am'],
         'group' => $row['gruppe_name'],
+        'done_at' => $row['erledigt_am'],
+        'done_by' => $row['erledigt_namen'],
     ];
 }
 

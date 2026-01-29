@@ -65,6 +65,7 @@ body {
     font-weight: 700;
     margin-bottom: 0.6rem;
     letter-spacing: 0.04em;
+    color: #c2c2c2;
 }
 
 .train-row {
@@ -127,6 +128,7 @@ body {
     font-weight: 700;
     margin-bottom: 0.6rem;
     letter-spacing: 0.04em;
+    color: #c2c2c2;
 }
 
 .waste-title {
@@ -134,6 +136,7 @@ body {
     font-weight: 700;
     margin: 0.9rem 0 0.5rem;
     letter-spacing: 0.03em;
+    color: #c2c2c2;
 }
 
 .weather-row, .waste-row {
@@ -169,11 +172,18 @@ body {
     color: #aaa;
 }
 
+.waste-row-muted .waste-date,
+.waste-row-muted .waste-type,
+.waste-row-muted .waste-time {
+    color: #c2c2c2;
+}
+
 .sonstige-title {
     font-size: clamp(1.05rem, 1.2vw + 0.3vh, 1.6rem);
     font-weight: 700;
     margin: 0.9rem 0 0.5rem;
     letter-spacing: 0.03em;
+    color: #c2c2c2;
 }
 
 .sonstige-row {
@@ -252,6 +262,7 @@ body {
     font-weight: 700;
     margin: 0.9rem 0 0.5rem;
     letter-spacing: 0.03em;
+    color: #c2c2c2;
 }
 
 .task-row {

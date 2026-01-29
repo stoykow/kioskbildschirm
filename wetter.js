@@ -47,6 +47,12 @@ function formatNowDateTime() {
     });
 }
 
+function updateStatusTime() {
+    const el = document.getElementById('weather-status-time');
+    if (!el) return;
+    el.textContent = formatNowDateTime();
+}
+
 async function fetchHaGeraet(geraet) {
     const res = await fetch(`geraet_status.php?geraet=${encodeURIComponent(geraet)}&limit=1`);
     const data = await res.json();
@@ -106,7 +112,7 @@ async function fetchWeather() {
             `<div class="weather-row">
                 <span class="weather-label">Datum/Uhrzeit:</span>
                 <span class="weather-value">
-                    <span class="weather-status-time">${statusTime}</span>
+                    <span id="weather-status-time" class="weather-status-time">${statusTime}</span>
                 </span>
             </div>` +
             `<div class="weather-row">
@@ -121,6 +127,7 @@ async function fetchWeather() {
                 <span class="weather-label">Haustür:</span>
                 <span class="weather-value weather-status ${tuerInfo.className}">${tuerInfo.label}</span>
             </div>`;
+        updateStatusTime();
     } catch (error) {
         document.getElementById('weather').textContent = 'Fehler beim Laden der HA-Daten';
         console.error('Fehler beim Laden der HA-Daten:', error);

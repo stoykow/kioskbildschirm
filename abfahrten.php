@@ -63,7 +63,7 @@ $stmt = $pdo->prepare(
      WHERE h.externe_id = :stop_id
        AND {$modeCondition}
        AND COALESCE(a.tatsaechliche_zeit, a.geplante_zeit) >= :now_time
-     ORDER BY a.geplante_zeit ASC
+     ORDER BY COALESCE(a.tatsaechliche_zeit, a.geplante_zeit) ASC
      LIMIT :limit"
 );
 $stmt->bindValue(':stop_id', $stopExternalId, PDO::PARAM_STR);

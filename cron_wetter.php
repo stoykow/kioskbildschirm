@@ -5,16 +5,32 @@ header('Content-Type: text/plain; charset=utf-8');
 
 require_once __DIR__ . '/config.php';
 
-$dbHost = getenv('DB_HOST') ?: 'localhost';
-$dbName = getenv('DB_NAME') ?: '';
-$dbUser = getenv('DB_USER') ?: '';
-$dbPass = getenv('DB_PASS') ?: '';
-
-if ($dbName === '' || $dbUser === '') {
+try {
+    $pdo = db_connect();
+} catch (RuntimeException $e) {
     http_response_code(500);
-    echo "DB env vars missing (DB_NAME/DB_USER).\n";
+    echo $e->getMessage() . "\n";
+    exit;
+} catch (PDOException $e) {
+    http_response_code(500);
+    echo "DB connect failed.\n";
     exit;
 }
+
+$appConfig = app_config_get($pdo);
+$apiKey = env_value('OPENWEATHER_API', '');
+$lat = $appConfig['openweather_lat'] ?? '51.1508';
+$lon = $appConfig['openweather_lon'] ?? '14.9684';
+$lang = $appConfig['openweather_lang'] ?? 'de';
+$units = $appConfig['openweather_units'] ?? 'metric';
+
+if ($apiKey === '') {
+    http_response_code(500);
+    echo "OPENWEATHER_API missing.\n";
+    exit;
+}
+
+$url = "https://api.openweathermap.org/data/2.5/weather?lat={$lat}&lon={$lon}&appid={$apiKey}&lang={$lang}&units={$units}";
 
 $context = stream_context_create([
     'http' => [
@@ -35,34 +51,6 @@ if (!is_array($data)) {
     echo "Weather JSON invalid.\n";
     exit;
 }
-
-try {
-    $pdo = new PDO(
-        "mysql:host={$dbHost};dbname={$dbName};charset=utf8mb4",
-        $dbUser,
-        $dbPass,
-        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]
-    );
-} catch (PDOException $e) {
-    http_response_code(500);
-    echo "DB connect failed.\n";
-    exit;
-}
-
-$appConfig = app_config_get($pdo);
-$apiKey = $appConfig['openweather_api_key'] ?? '';
-$lat = $appConfig['openweather_lat'] ?? '51.1508';
-$lon = $appConfig['openweather_lon'] ?? '14.9684';
-$lang = $appConfig['openweather_lang'] ?? 'de';
-$units = $appConfig['openweather_units'] ?? 'metric';
-
-if ($apiKey === '') {
-    http_response_code(500);
-    echo "OPENWEATHER_API missing.\n";
-    exit;
-}
-
-$url = "https://api.openweathermap.org/data/2.5/weather?lat={$lat}&lon={$lon}&appid={$apiKey}&lang={$lang}&units={$units}";
 
 $main = $data['main'] ?? [];
 $wind = $data['wind'] ?? [];

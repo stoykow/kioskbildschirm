@@ -3,6 +3,8 @@
 
 header('Content-Type: text/plain; charset=utf-8');
 
+require_once __DIR__ . '/config.php';
+
 // Einstellungen (true/false)
 $load_bio = false;
 $load_restmuell = true;
@@ -17,16 +19,7 @@ $schadstoff_locations = [
 
 $icsUrl = 'https://www.abfall-eglz.de/abfallkalender.html?ort=G%C3%B6rlitz&strasse=Lutherstra%C3%9Fe&ortsteil=&ics=1';
 
-$dbHost = getenv('DB_HOST') ?: 'localhost';
-$dbName = getenv('DB_NAME') ?: '';
-$dbUser = getenv('DB_USER') ?: '';
-$dbPass = getenv('DB_PASS') ?: '';
-
-if ($dbName === '' || $dbUser === '') {
-    http_response_code(500);
-    echo "DB env vars missing (DB_NAME/DB_USER).\n";
-    exit;
-}
+// DB via config.php
 
 $context = stream_context_create([
     'http' => [
@@ -42,12 +35,11 @@ if ($ics === false) {
 }
 
 try {
-    $pdo = new PDO(
-        "mysql:host={$dbHost};dbname={$dbName};charset=utf8mb4",
-        $dbUser,
-        $dbPass,
-        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]
-    );
+    $pdo = db_connect();
+} catch (RuntimeException $e) {
+    http_response_code(500);
+    echo $e->getMessage() . "\n";
+    exit;
 } catch (PDOException $e) {
     http_response_code(500);
     echo "DB connect failed.\n";

@@ -29,6 +29,7 @@ header("Expires: 0");
 
     <script src="wetter.js?v=<?php echo time(); ?>"></script>
     <script src="abfall.js?v=<?php echo time(); ?>"></script>
+    <script src="aufgaben.js?v=<?php echo time(); ?>"></script>
     <script src="abfahrten.js?v=<?php echo time(); ?>"></script>
     <script src="kiosk.js?v=<?php echo time(); ?>"></script>
     

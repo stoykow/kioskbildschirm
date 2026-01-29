@@ -2,10 +2,8 @@
 // Abfallkalender laden + Erledigt-Markierung
 
 let wasteEventsCache = [];
-let tasksCache = [];
 let wasteUsersCache = null;
 let wasteModalReady = false;
-let taskModalReady = false;
 let wasteInteractive = false;
 
 function escapeHtml(value) {
@@ -36,11 +34,11 @@ function getLabel(dateStr) {
     const tag = wochentage[d.getDay()];
     const isoDay = d.getDay() === 0 ? 7 : d.getDay();
 
-    if (diff === 0) {
+    if (diff == 0) {
         return `Heute ${tagDatum}`;
-    } else if (diff === 1) {
+    } else if (diff == 1) {
         return `Morgen ${tagDatum}`;
-    } else if (diff === 2) {
+    } else if (diff == 2) {
         return `Uebermorgen ${tagDatum}`;
     } else if (diff < (7 - isoDay)) {
         return `am ${tag} ${tagDatum}`;
@@ -52,7 +50,7 @@ function getLabel(dateStr) {
 }
 
 function buildWasteSection(entries, interactive) {
-    if (!Array.isArray(entries) || entries.length === 0) {
+    if (!Array.isArray(entries) || entries.length == 0) {
         return {
             html: '<div class="waste-title">Abfallkalender</div><div class="waste-row">Keine Termine gefunden</div>',
             bind: null
@@ -74,7 +72,7 @@ function buildWasteSection(entries, interactive) {
 
     const html = `
         <div class="waste-title">Abfallkalender</div>
-        ${upcoming.length === 0 ? '<div class="waste-row">Keine Termine im Zeitraum</div>' :
+        ${upcoming.length == 0 ? '<div class="waste-row">Keine Termine im Zeitraum</div>' :
             upcoming.map(e => {
                 const rowClasses = ['waste-row'];
                 if (interactive) rowClasses.push('waste-clickable');
@@ -97,58 +95,29 @@ function buildWasteSection(entries, interactive) {
     `;
 
     return {
-        html,
+        html: html,
         bind: interactive ? bindWasteRowHandlers : null
     };
 }
 
-function buildTasksSection(entries, interactive) {
-    const title = '<div class="task-title">Aufgaben</div>';
-    if (!Array.isArray(entries) || entries.length === 0) {
-        return {
-            html: `${title}<div class="task-row">Keine Aufgaben offen</div>`,
-            bind: null
-        };
+function getTasksSection() {
+    if (window.hausordnungTasks && typeof window.hausordnungTasks.buildSection == 'function') {
+        return window.hausordnungTasks.buildSection();
     }
-
-    const rows = entries.map(task => {
-        const rowClasses = ['task-row'];
-        if (interactive) rowClasses.push('task-clickable');
-        if (task.done_by) rowClasses.push('task-row-done');
-        const dataAttr = interactive ? `data-task-id="${task.id}"` : '';
-        const dueText = task.due ? getLabel(task.due) : 'Ohne Datum';
-        const titleText = escapeHtml(decodeHtmlEntities(task.title));
-        const groupName = task.group ? decodeHtmlEntities(task.group) : 'offen';
-        const groupText = `Zuständig: ${groupName}`;
-        const doneText = task.done_by ? `Erledigt: ${decodeHtmlEntities(task.done_by)}` : 'Unerledigt';
-        const statusClass = task.done_by ? 'task-status task-status-done' : 'task-status task-status-open';
-        return `
-            <div class="${rowClasses.join(' ')}" ${dataAttr}>
-                <div class="task-line">
-                    <span class="task-date">${escapeHtml(dueText)}</span>
-                    <span class="task-name">${titleText}</span>
-                    <span class="task-group">(${escapeHtml(groupName)})</span>
-                    <span class="${statusClass}">${escapeHtml(doneText)}</span>
-                </div>
-            </div>
-        `;
-    }).join('');
-
-    return {
-        html: `${title}${rows}`,
-        bind: interactive ? bindTaskRowHandlers : null
-    };
+    return { html: '', bind: null };
 }
 
 function renderCombined() {
     const wasteDiv = document.getElementById('waste');
     if (!wasteDiv) return;
     const wasteSection = buildWasteSection(wasteEventsCache, wasteInteractive);
-    const tasksSection = buildTasksSection(tasksCache, true);
+    const tasksSection = getTasksSection();
     wasteDiv.innerHTML = `${wasteSection.html}${tasksSection.html}`;
     if (wasteSection.bind) wasteSection.bind();
     if (tasksSection.bind) tasksSection.bind();
 }
+
+window.hausordnungRenderCombined = renderCombined;
 
 function fetchWasteUsers() {
     if (wasteUsersCache) {
@@ -182,7 +151,7 @@ function ensureWasteModal() {
         </div>
     `;
     modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
+        if (e.target == modal) {
             closeWasteModal();
         }
     });
@@ -209,7 +178,7 @@ function ensureWasteModal() {
 }
 
 function openWasteModal(eventId) {
-    const eventItem = wasteEventsCache.find(e => e.id === eventId);
+    const eventItem = wasteEventsCache.find(e => e.id == eventId);
     if (!eventItem) return;
 
     ensureWasteModal();
@@ -234,7 +203,7 @@ function openWasteModal(eventId) {
 
     fetchWasteUsers()
         .then(users => {
-            if (!Array.isArray(users) || users.length === 0) {
+            if (!Array.isArray(users) || users.length == 0) {
                 list.innerHTML = '<div class="waste-loading">Keine Benutzer vorhanden</div>';
                 return;
             }
@@ -282,7 +251,7 @@ function markWasteDone(eventId, userIds) {
             }
             const namesById = new Map((wasteUsersCache || []).map(u => [u.id, u.name]));
             wasteEventsCache = wasteEventsCache.map(e => {
-                if (e.id !== eventId) return e;
+                if (e.id != eventId) return e;
                 const existing = (e.done_by ? String(e.done_by).split(',').map(s => s.trim()) : []);
                 const added = userIds.map(id => namesById.get(id)).filter(Boolean);
                 const merged = Array.from(new Set([...existing, ...added]));
@@ -308,7 +277,7 @@ function markWasteUndone(eventId) {
                 throw new Error('Mark undone failed');
             }
             wasteEventsCache = wasteEventsCache.map(e => {
-                if (e.id === eventId) {
+                if (e.id == eventId) {
                     return { ...e, done_by: null, done_at: null };
                 }
                 return e;
@@ -331,183 +300,6 @@ function bindWasteRowHandlers() {
             }
         });
     });
-}
-
-function ensureTaskModal() {
-    if (taskModalReady) return;
-    const modal = document.createElement('div');
-    modal.id = 'task-modal';
-    modal.innerHTML = `
-        <div class="task-modal-card">
-            <div class="task-modal-title">Aufgabe</div>
-            <div class="task-modal-sub"></div>
-            <div class="task-user-list"></div>
-            <div class="task-modal-actions">
-                <button class="task-modal-confirm">OK</button>
-                <button class="task-modal-undone">Nicht erledigt</button>
-                <button class="task-modal-cancel">Abbrechen</button>
-            </div>
-        </div>
-    `;
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            closeTaskModal();
-        }
-    });
-    document.body.appendChild(modal);
-    modal.querySelector('.task-modal-cancel').addEventListener('click', closeTaskModal);
-    modal.querySelector('.task-modal-confirm').addEventListener('click', () => {
-        const taskId = parseInt(modal.getAttribute('data-task-id') || '0', 10);
-        if (taskId > 0) {
-            const selected = Array.from(modal.querySelectorAll('.task-user-button.is-selected'))
-                .map(btn => parseInt(btn.getAttribute('data-user-id') || '0', 10))
-                .filter(id => id > 0);
-            if (selected.length > 0) {
-                markTaskDone(taskId, selected);
-            }
-        }
-    });
-    modal.querySelector('.task-modal-undone').addEventListener('click', () => {
-        const taskId = parseInt(modal.getAttribute('data-task-id') || '0', 10);
-        if (taskId > 0) {
-            markTaskUndone(taskId);
-        }
-    });
-    taskModalReady = true;
-}
-
-function openTaskModal(taskId) {
-    const taskItem = tasksCache.find(t => t.id === taskId);
-    if (!taskItem) return;
-
-    ensureTaskModal();
-    const modal = document.getElementById('task-modal');
-    const title = modal.querySelector('.task-modal-title');
-    const sub = modal.querySelector('.task-modal-sub');
-    const list = modal.querySelector('.task-user-list');
-
-    title.textContent = taskItem.title;
-    const dueText = taskItem.due ? getLabel(taskItem.due) : 'Ohne Datum';
-    const groupText = taskItem.group ? `Zustaendig: ${decodeHtmlEntities(taskItem.group)}` : 'Zustaendig: offen';
-    const doneText = taskItem.done_by ? `Erledigt: ${decodeHtmlEntities(taskItem.done_by)}` : 'Unerledigt';
-    sub.textContent = `${dueText} - ${groupText} - ${doneText}`;
-    modal.setAttribute('data-task-id', String(taskItem.id));
-
-    list.innerHTML = '<div class="task-loading">Benutzer werden geladen...</div>';
-    modal.classList.add('is-open');
-
-    const undoButton = modal.querySelector('.task-modal-undone');
-    undoButton.style.display = taskItem.done_by ? 'inline-flex' : 'none';
-
-    fetchWasteUsers()
-        .then(users => {
-            if (!Array.isArray(users) || users.length === 0) {
-                list.innerHTML = '<div class="task-loading">Keine Benutzer vorhanden</div>';
-                return;
-            }
-            list.innerHTML = '';
-            users.forEach(user => {
-                const btn = document.createElement('button');
-                btn.className = 'task-user-button';
-                btn.textContent = user.name;
-                btn.setAttribute('data-user-id', String(user.id));
-                btn.addEventListener('click', () => {
-                    btn.classList.toggle('is-selected');
-                });
-                list.appendChild(btn);
-            });
-        })
-        .catch(() => {
-            list.innerHTML = '<div class="task-loading">Fehler beim Laden der Benutzer</div>';
-        });
-}
-
-function closeTaskModal() {
-    const modal = document.getElementById('task-modal');
-    if (modal) {
-        modal.removeAttribute('data-task-id');
-        modal.classList.remove('is-open');
-    }
-}
-
-function markTaskDone(taskId, userIds) {
-    fetch('aufgaben_done.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task_id: taskId, user_ids: userIds })
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (!data || !data.ok) {
-                throw new Error('Mark task done failed');
-            }
-            const namesById = new Map((wasteUsersCache || []).map(u => [u.id, u.name]));
-            tasksCache = tasksCache.map(t => {
-                if (t.id !== taskId) return t;
-                const existing = (t.done_by ? String(t.done_by).split(',').map(s => s.trim()) : []);
-                const added = userIds.map(id => namesById.get(id)).filter(Boolean);
-                const merged = Array.from(new Set([...existing, ...added]));
-                return { ...t, done_by: merged.join(', '), done_at: new Date().toISOString() };
-            });
-            renderCombined();
-            closeTaskModal();
-        })
-        .catch(() => {
-            closeTaskModal();
-        });
-}
-
-function markTaskUndone(taskId) {
-    fetch('aufgaben_done.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task_id: taskId, undone: true })
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (!data || !data.ok) {
-                throw new Error('Mark task undone failed');
-            }
-            tasksCache = tasksCache.map(t => {
-                if (t.id === taskId) {
-                    return { ...t, done_by: null, done_at: null };
-                }
-                return t;
-            });
-            renderCombined();
-            closeTaskModal();
-        })
-        .catch(() => {
-            closeTaskModal();
-        });
-}
-
-function bindTaskRowHandlers() {
-    const rows = document.querySelectorAll('.task-row[data-task-id]');
-    rows.forEach(row => {
-        row.addEventListener('click', () => {
-            const taskId = parseInt(row.getAttribute('data-task-id'), 10);
-            if (taskId > 0) {
-                openTaskModal(taskId);
-            }
-        });
-    });
-}
-
-function fetchTasks() {
-    fetch('aufgaben_api.php')
-        .then(response => response.json())
-        .then(data => {
-            if (!data || !Array.isArray(data.tasks)) {
-                throw new Error('Invalid aufgaben_api response');
-            }
-            tasksCache = data.tasks;
-            renderCombined();
-        })
-        .catch(() => {
-            tasksCache = [];
-            renderCombined();
-        });
 }
 
 function fetchWaste() {

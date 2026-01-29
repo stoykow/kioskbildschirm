@@ -33,13 +33,22 @@ $stmt = $pdo->prepare(
         t.summary,
         t.start_time,
         t.end_time,
-        t.erledigt_am,
-        GROUP_CONCAT(b.name ORDER BY b.name SEPARATOR ', ') AS erledigt_namen
+        (SELECT MAX(ae.erledigt_am)
+         FROM termine_abfall_erledigt ae
+         WHERE ae.termin_id = t.id) AS erledigt_am,
+        (SELECT GROUP_CONCAT(b.name ORDER BY b.name SEPARATOR ', ')
+         FROM termine_abfall_erledigt ae
+         JOIN benutzer b ON b.id = ae.benutzer_id
+         WHERE ae.termin_id = t.id) AS erledigt_namen,
+        (SELECT MAX(ar.reingestellt_am)
+         FROM termine_abfall_reingestellt ar
+         WHERE ar.termin_id = t.id) AS reingestellt_am,
+        (SELECT GROUP_CONCAT(b2.name ORDER BY b2.name SEPARATOR ', ')
+         FROM termine_abfall_reingestellt ar
+         JOIN benutzer b2 ON b2.id = ar.benutzer_id
+         WHERE ar.termin_id = t.id) AS reingestellt_namen
      FROM termine_abfall t
-     LEFT JOIN termine_abfall_erledigt ae ON ae.termin_id = t.id
-     LEFT JOIN benutzer b ON b.id = ae.benutzer_id
      WHERE t.datum BETWEEN :start AND :end
-     GROUP BY t.id
      ORDER BY t.datum ASC, t.start_time ASC, t.id ASC"
 );
 $stmt->execute([':start' => $today, ':end' => $in14]);
@@ -53,6 +62,8 @@ foreach ($stmt->fetchAll() as $row) {
         'end' => $row['end_time'] ? substr($row['end_time'], 0, 5) : null,
         'done_at' => $row['erledigt_am'],
         'done_by' => $row['erledigt_namen'],
+        'rein_done_at' => $row['reingestellt_am'],
+        'rein_done_by' => $row['reingestellt_namen'],
     ];
 }
 

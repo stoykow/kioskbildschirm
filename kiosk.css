@@ -96,7 +96,7 @@ body {
 
 .train-time {
     font-weight: 500;
-    color: #fff;
+    color: #c2c2c2;
 }
 .train-line {
     font-weight: 400;
@@ -159,7 +159,7 @@ body {
 
 .waste-date {
     font-weight: 500;
-    color: #fff;
+    color: #c2c2c2;
 }
 
 .waste-type {
@@ -169,7 +169,7 @@ body {
 
 .waste-time {
     font-weight: 400;
-    color: #aaa;
+    color: #b0b0b0;
 }
 
 .waste-row-muted .waste-date,
@@ -206,7 +206,7 @@ body {
 
 .sonstige-date {
     font-weight: 500;
-    color: #fff;
+    color: #c2c2c2;
 }
 
 .sonstige-type {
@@ -221,7 +221,7 @@ body {
 
 .sonstige-time {
     font-weight: 400;
-    color: #aaa;
+    color: #b0b0b0;
 }
 
 .sonstige-status {
@@ -292,7 +292,7 @@ body {
 
 .task-date {
     font-weight: 500;
-    color: #fff;
+    color: #c2c2c2;
 }
 
 .task-name {
@@ -637,7 +637,7 @@ body {
 
 .weather-status-time {
     font-weight: 400;
-    color: #aaa;
+    color: #b0b0b0;
 }
 
 .weather-status-open {

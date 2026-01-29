@@ -49,6 +49,44 @@ function getLabel(dateStr) {
     }
 }
 
+function parseDateLocal(dateStr) {
+    if (!dateStr) return null;
+    const parts = String(dateStr).split('-').map(n => parseInt(n, 10));
+    if (parts.length !== 3 || parts.some(n => Number.isNaN(n))) return null;
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+}
+
+function getWastePhase(dateStr) {
+    const target = parseDateLocal(dateStr);
+    if (!target) return 'rausstellen';
+    const now = new Date();
+    const sameDay = now.getFullYear() === target.getFullYear()
+        && now.getMonth() === target.getMonth()
+        && now.getDate() === target.getDate();
+    if (sameDay && now.getHours() >= 6) {
+        return 'reinstellen';
+    }
+    return 'rausstellen';
+}
+
+function getDisplayLabel(dateStr, phase) {
+    if (phase === 'reinstellen') {
+        return 'Heute';
+    }
+    return getLabel(dateStr);
+}
+
+function getDisplaySummary(summary, phase) {
+    const base = String(summary || '');
+    if (phase !== 'reinstellen') {
+        return base;
+    }
+    if (base.toLowerCase().includes('reinstellen')) {
+        return base;
+    }
+    return `${base} reinstellen`;
+}
+
 function buildWasteSection(entries, interactive) {
     if (!Array.isArray(entries) || entries.length == 0) {
         return {
@@ -69,20 +107,22 @@ function buildWasteSection(entries, interactive) {
         <div class="waste-title">Abfallkalender</div>
         ${upcoming.map(e => {
             const isSchadstoff = String(e.summary || '').toLowerCase().startsWith('schadstoffmobil');
+            const phase = getWastePhase(e.date);
+            const doneBy = phase === 'reinstellen' ? e.rein_done_by : e.done_by;
             const showStatus = !isSchadstoff;
             const rowClasses = ['waste-row'];
             if (isSchadstoff) rowClasses.push('waste-row-muted');
             if (interactive && !isSchadstoff) rowClasses.push('waste-clickable');
-            if (showStatus && e.done_by) rowClasses.push('waste-done-row');
-            const statusClass = e.done_by ? 'waste-status waste-status-done' : 'waste-status waste-status-open';
-            const statusText = e.done_by ? `Erledigt: ${escapeHtml(e.done_by)}` : 'Unerledigt';
+            if (showStatus && doneBy) rowClasses.push('waste-done-row');
+            const statusClass = doneBy ? 'waste-status waste-status-done' : 'waste-status waste-status-open';
+            const statusText = doneBy ? `Erledigt: ${escapeHtml(doneBy)}` : 'Unerledigt';
             const doneBadge = showStatus ? `<span class="${statusClass}">${statusText}</span>` : '';
             const time = e.start ? `<span class="waste-time">${escapeHtml(e.start)}${e.end ? ' - ' + escapeHtml(e.end) : ''}</span>` : '';
             const dataAttr = interactive && !isSchadstoff && e.id ? `data-event-id="${e.id}"` : '';
             return `
                 <div class="${rowClasses.join(' ')}" ${dataAttr}>
-                    <span class="waste-date">${escapeHtml(getLabel(e.date))}</span>
-                    <span class="waste-type">${escapeHtml(e.summary)}</span>
+                    <span class="waste-date">${escapeHtml(getDisplayLabel(e.date, phase))}</span>
+                    <span class="waste-type">${escapeHtml(getDisplaySummary(e.summary, phase))}</span>
                     ${time}
                     ${doneBadge}
                 </div>
@@ -188,11 +228,14 @@ function openWasteModal(eventId) {
     const list = modal.querySelector('.waste-user-list');
     const undoButton = modal.querySelector('.waste-modal-undone');
 
-    title.textContent = eventItem.summary;
-    sub.textContent = `${getLabel(eventItem.date)}${eventItem.start ? ' - ' + eventItem.start : ''}`;
+    const action = getWastePhase(eventItem.date);
+    const doneBy = action === 'reinstellen' ? eventItem.rein_done_by : eventItem.done_by;
+    title.textContent = getDisplaySummary(eventItem.summary, action);
+    sub.textContent = `${getDisplayLabel(eventItem.date, action)}${eventItem.start ? ' - ' + eventItem.start : ''}`;
     modal.setAttribute('data-event-id', String(eventItem.id));
+    modal.setAttribute('data-action', action);
 
-    if (eventItem.done_by) {
+    if (doneBy) {
         undoButton.style.display = 'inline-flex';
     } else {
         undoButton.style.display = 'none';
@@ -218,10 +261,10 @@ function openWasteModal(eventId) {
                 });
                 list.appendChild(btn);
             });
-            if (eventItem.done_by) {
+            if (doneBy) {
                 const info = document.createElement('div');
                 info.className = 'waste-done-info';
-                info.textContent = `Bereits erledigt von ${eventItem.done_by}`;
+                info.textContent = `Bereits erledigt von ${doneBy}`;
                 list.appendChild(info);
             }
         })
@@ -239,10 +282,12 @@ function closeWasteModal() {
 }
 
 function markWasteDone(eventId, userIds) {
+    const modal = document.getElementById('waste-modal');
+    const action = modal ? (modal.getAttribute('data-action') || 'rausstellen') : 'rausstellen';
     fetch('abfall_done.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ event_id: eventId, user_ids: userIds })
+        body: JSON.stringify({ event_id: eventId, user_ids: userIds, action })
     })
         .then(response => response.json())
         .then(data => {
@@ -252,8 +297,13 @@ function markWasteDone(eventId, userIds) {
             const namesById = new Map((wasteUsersCache || []).map(u => [u.id, u.name]));
             wasteEventsCache = wasteEventsCache.map(e => {
                 if (e.id != eventId) return e;
-                const existing = (e.done_by ? String(e.done_by).split(',').map(s => s.trim()) : []);
                 const added = userIds.map(id => namesById.get(id)).filter(Boolean);
+                if (action === 'reinstellen') {
+                    const existingRein = (e.rein_done_by ? String(e.rein_done_by).split(',').map(s => s.trim()) : []);
+                    const mergedRein = Array.from(new Set([...existingRein, ...added]));
+                    return { ...e, rein_done_by: mergedRein.join(', '), rein_done_at: new Date().toISOString() };
+                }
+                const existing = (e.done_by ? String(e.done_by).split(',').map(s => s.trim()) : []);
                 const merged = Array.from(new Set([...existing, ...added]));
                 return { ...e, done_by: merged.join(', '), done_at: new Date().toISOString() };
             });
@@ -266,10 +316,12 @@ function markWasteDone(eventId, userIds) {
 }
 
 function markWasteUndone(eventId) {
+    const modal = document.getElementById('waste-modal');
+    const action = modal ? (modal.getAttribute('data-action') || 'rausstellen') : 'rausstellen';
     fetch('abfall_done.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ event_id: eventId, undone: true })
+        body: JSON.stringify({ event_id: eventId, undone: true, action })
     })
         .then(response => response.json())
         .then(data => {
@@ -277,6 +329,9 @@ function markWasteUndone(eventId) {
                 throw new Error('Mark undone failed');
             }
             wasteEventsCache = wasteEventsCache.map(e => {
+                if (e.id == eventId && action === 'reinstellen') {
+                    return { ...e, rein_done_by: null, rein_done_at: null };
+                }
                 if (e.id == eventId) {
                     return { ...e, done_by: null, done_at: null };
                 }

@@ -17,6 +17,12 @@ $eventId = isset($data['event_id']) ? (int)$data['event_id'] : 0;
 $userIds = $data['user_ids'] ?? null;
 $userId = isset($data['user_id']) ? (int)$data['user_id'] : 0;
 $markUndone = !empty($data['undone']);
+$action = $data['action'] ?? 'rausstellen';
+if (!in_array($action, ['rausstellen', 'reinstellen'], true)) {
+    http_response_code(400);
+    echo json_encode(['error' => 'Ungueltige action']);
+    exit;
+}
 
 if ($eventId <= 0 || (!$markUndone && $userId <= 0 && !is_array($userIds))) {
     http_response_code(400);
@@ -73,30 +79,46 @@ try {
         exit;
     }
 
-    if ($markUndone) {
-        $del = $pdo->prepare("DELETE FROM termine_abfall_erledigt WHERE termin_id = :event_id");
-        $del->execute([':event_id' => $eventId]);
-        $upd = $pdo->prepare(
-            "UPDATE termine_abfall
-             SET erledigt_von = NULL, erledigt_am = NULL
-             WHERE id = :event_id"
-        );
-        $upd->execute([':event_id' => $eventId]);
-    } else {
-        $ins = $pdo->prepare(
-            "INSERT INTO termine_abfall_erledigt (termin_id, benutzer_id)
-             VALUES (:event_id, :user_id)
-             ON DUPLICATE KEY UPDATE erledigt_am = VALUES(erledigt_am)"
-        );
-        foreach ($userIds as $uid) {
-            $ins->execute([':event_id' => $eventId, ':user_id' => $uid]);
+    if ($action === 'reinstellen') {
+        if ($markUndone) {
+            $del = $pdo->prepare("DELETE FROM termine_abfall_reingestellt WHERE termin_id = :event_id");
+            $del->execute([':event_id' => $eventId]);
+        } else {
+            $ins = $pdo->prepare(
+                "INSERT INTO termine_abfall_reingestellt (termin_id, benutzer_id)
+                 VALUES (:event_id, :user_id)
+                 ON DUPLICATE KEY UPDATE reingestellt_am = VALUES(reingestellt_am)"
+            );
+            foreach ($userIds as $uid) {
+                $ins->execute([':event_id' => $eventId, ':user_id' => $uid]);
+            }
         }
-        $upd = $pdo->prepare(
-            "UPDATE termine_abfall
-             SET erledigt_am = NOW()
-             WHERE id = :event_id"
-        );
-        $upd->execute([':event_id' => $eventId]);
+    } else {
+        if ($markUndone) {
+            $del = $pdo->prepare("DELETE FROM termine_abfall_erledigt WHERE termin_id = :event_id");
+            $del->execute([':event_id' => $eventId]);
+            $upd = $pdo->prepare(
+                "UPDATE termine_abfall
+                 SET erledigt_von = NULL, erledigt_am = NULL
+                 WHERE id = :event_id"
+            );
+            $upd->execute([':event_id' => $eventId]);
+        } else {
+            $ins = $pdo->prepare(
+                "INSERT INTO termine_abfall_erledigt (termin_id, benutzer_id)
+                 VALUES (:event_id, :user_id)
+                 ON DUPLICATE KEY UPDATE erledigt_am = VALUES(erledigt_am)"
+            );
+            foreach ($userIds as $uid) {
+                $ins->execute([':event_id' => $eventId, ':user_id' => $uid]);
+            }
+            $upd = $pdo->prepare(
+                "UPDATE termine_abfall
+                 SET erledigt_am = NOW()
+                 WHERE id = :event_id"
+            );
+            $upd->execute([':event_id' => $eventId]);
+        }
     }
 
     $pdo->commit();

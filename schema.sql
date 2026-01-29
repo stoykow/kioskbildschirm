@@ -111,6 +111,17 @@ CREATE TABLE IF NOT EXISTS termine_abfall_erledigt (
   CONSTRAINT fk_termine_abfall_erledigt_benutzer FOREIGN KEY (benutzer_id) REFERENCES benutzer(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS termine_abfall_reingestellt (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  termin_id INT NOT NULL,
+  benutzer_id INT NOT NULL,
+  reingestellt_am TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_termin_benutzer_rein (termin_id, benutzer_id),
+  INDEX idx_termin_zeit_rein (termin_id, reingestellt_am),
+  CONSTRAINT fk_termine_abfall_rein_termin FOREIGN KEY (termin_id) REFERENCES termine_abfall(id),
+  CONSTRAINT fk_termine_abfall_rein_benutzer FOREIGN KEY (benutzer_id) REFERENCES benutzer(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS termine_sonstige (
   id INT AUTO_INCREMENT PRIMARY KEY,
   datum DATE NOT NULL,

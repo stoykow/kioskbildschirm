@@ -38,6 +38,23 @@ if (!$markUndone && count($userIds) === 0) {
     exit;
 }
 
+function get_rein_task_info_from_type($type) {
+    $type = is_string($type) ? strtolower($type) : '';
+    if ($type === 'restmuell') {
+        return ['type' => 'restmuell_rein', 'title' => 'Restmuell reinstellen'];
+    }
+    if ($type === 'papier') {
+        return ['type' => 'papier_rein', 'title' => 'Papiertonne reinstellen'];
+    }
+    if ($type === 'gelb') {
+        return ['type' => 'gelb_rein', 'title' => 'Gelbe Tonne reinstellen'];
+    }
+    if ($type === 'bio') {
+        return ['type' => 'bio_rein', 'title' => 'Biotonne reinstellen'];
+    }
+    return null;
+}
+
 try {
     $pdo = db_connect();
 } catch (RuntimeException $e) {
@@ -70,9 +87,10 @@ try {
         }
     }
 
-    $checkTask = $pdo->prepare("SELECT id FROM aufgaben WHERE id = :id LIMIT 1");
+    $checkTask = $pdo->prepare("SELECT id, quelle_typ, quelle_datum FROM aufgaben WHERE id = :id LIMIT 1");
     $checkTask->execute([':id' => $taskId]);
-    if (!$checkTask->fetch()) {
+    $taskRow = $checkTask->fetch(PDO::FETCH_ASSOC);
+    if (!$taskRow) {
         $pdo->rollBack();
         http_response_code(400);
         echo json_encode(['error' => 'Unbekannte Aufgabe']);
@@ -100,6 +118,39 @@ try {
              WHERE id = :task_id"
         );
         $upd->execute([':task_id' => $taskId]);
+    }
+
+    $sourceType = $taskRow['quelle_typ'] ?? null;
+    $sourceDate = $taskRow['quelle_datum'] ?? null;
+    $reinInfo = $sourceType && !str_ends_with((string)$sourceType, '_rein')
+        ? get_rein_task_info_from_type((string)$sourceType)
+        : null;
+    if ($reinInfo && $sourceDate) {
+        if ($markUndone) {
+            $delTask = $pdo->prepare(
+                "DELETE FROM aufgaben
+                 WHERE quelle_typ = :typ AND quelle_datum = :datum"
+            );
+            $delTask->execute([':typ' => $reinInfo['type'], ':datum' => $sourceDate]);
+        } else {
+            $taskUpsert = $pdo->prepare(
+                "INSERT INTO aufgaben (titel, details, faellig_am, gruppe_id, quelle_typ, quelle_datum)
+                 VALUES (:titel, :details, :faellig_am, :gruppe_id, :quelle_typ, :quelle_datum)
+                 ON DUPLICATE KEY UPDATE
+                   titel = VALUES(titel),
+                   details = VALUES(details),
+                   faellig_am = VALUES(faellig_am),
+                   gruppe_id = VALUES(gruppe_id)"
+            );
+            $taskUpsert->execute([
+                ':titel' => $reinInfo['title'],
+                ':details' => 'Bitte nach Leerung wieder reinstellen',
+                ':faellig_am' => $sourceDate,
+                ':gruppe_id' => null,
+                ':quelle_typ' => $reinInfo['type'],
+                ':quelle_datum' => $sourceDate,
+            ]);
+        }
     }
 
     $pdo->commit();

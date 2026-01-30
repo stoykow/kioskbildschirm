@@ -25,6 +25,8 @@ $stmt = $pdo->prepare(
         a.faellig_am,
         g.name AS gruppe_name,
         a.erledigt_am,
+        a.quelle_typ,
+        a.quelle_datum,
         GROUP_CONCAT(b.name ORDER BY b.name SEPARATOR ', ') AS erledigt_namen
      FROM aufgaben a
      LEFT JOIN benutzer_gruppen g ON g.id = a.gruppe_id
@@ -46,6 +48,8 @@ foreach ($stmt->fetchAll() as $row) {
         'group' => $row['gruppe_name'],
         'done_at' => $row['erledigt_am'],
         'done_by' => $row['erledigt_namen'],
+        'source_type' => $row['quelle_typ'],
+        'source_date' => $row['quelle_datum'],
     ];
 }
 

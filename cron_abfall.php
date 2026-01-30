@@ -75,6 +75,15 @@ $upsert = $pdo->prepare(
        start_time = VALUES(start_time),
        end_time = VALUES(end_time)"
 );
+$eventSelect = $pdo->prepare(
+    "SELECT id
+     FROM termine_abfall
+     WHERE datum = :datum
+       AND summary = :summary
+       AND start_time <=> :start_time
+       AND end_time <=> :end_time
+     LIMIT 1"
+);
 
 $taskSelect = $pdo->prepare(
     "SELECT id
@@ -190,21 +199,49 @@ try {
             $event['summary'] = 'Schadstoffmobil Sechsstädteplatz';
         }
 
-        $upsert->execute([
-            ':uid' => $event['uid'],
+        $eventSelect->execute([
             ':datum' => $event['date'],
             ':summary' => $event['summary'],
             ':start_time' => $event['start'] ?? null,
             ':end_time' => $event['end'] ?? null,
         ]);
+        $existingEventId = $eventSelect->fetchColumn();
+        if ($existingEventId) {
+            $skipped++;
+        } else {
+            $upsert->execute([
+                ':uid' => $event['uid'],
+                ':datum' => $event['date'],
+                ':summary' => $event['summary'],
+                ':start_time' => $event['start'] ?? null,
+                ':end_time' => $event['end'] ?? null,
+            ]);
+            $inserted++;
+        }
 
+        $taskType = null;
+        $taskTitle = null;
         if ($load_restmuell && str_starts_with($summaryLower, 'rest')) {
+            $taskType = 'restmuell';
+            $taskTitle = 'Restmuell rausstellen';
+        } elseif ($load_papier && (str_contains($summaryLower, 'papier') || str_contains($summaryLower, 'blau'))) {
+            $taskType = 'papier';
+            $taskTitle = 'Papiertonne rausstellen';
+        } elseif ($load_gelbe && (str_contains($summaryLower, 'gelb') || str_contains($summaryLower, 'gelbe'))) {
+            $taskType = 'gelb';
+            $taskTitle = 'Gelbe Tonne rausstellen';
+        } elseif ($load_bio && str_starts_with($summaryLower, 'bio')) {
+            $taskType = 'bio';
+            $taskTitle = 'Biotonne rausstellen';
+        }
+
+        if ($taskType && $taskTitle) {
             $taskParams = [
-                ':titel' => 'Restmuell rausstellen',
-                ':details' => 'Bitte Restmuell rechtzeitig bereitstellen',
+                ':titel' => $taskTitle,
+                ':details' => 'Bitte rechtzeitig bereitstellen',
                 ':faellig_am' => $event['date'],
                 ':gruppe_id' => null,
-                ':quelle_typ' => 'restmuell',
+                ':quelle_typ' => $taskType,
                 ':quelle_datum' => $event['date'],
             ];
             $taskSelect->execute([
@@ -224,13 +261,22 @@ try {
                 $taskInsert->execute($taskParams);
             }
         }
-
-        $inserted++;
     }
 
     $cutoff = (new DateTimeImmutable('today'))->modify('-30 days')->format('Y-m-d');
     $cleanup = $pdo->prepare("DELETE FROM termine_abfall WHERE datum < :cutoff");
     $cleanup->execute([':cutoff' => $cutoff]);
+    $cleanupEvents = $pdo->prepare(
+        "DELETE t1
+         FROM termine_abfall t1
+         JOIN termine_abfall t2
+           ON t1.datum = t2.datum
+          AND t1.summary = t2.summary
+          AND t1.start_time <=> t2.start_time
+          AND t1.end_time <=> t2.end_time
+          AND t1.id > t2.id"
+    );
+    $cleanupEvents->execute();
     $cleanupTasks = $pdo->prepare(
         "DELETE a1
          FROM aufgaben a1

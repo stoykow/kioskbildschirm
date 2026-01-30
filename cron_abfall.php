@@ -76,14 +76,23 @@ $upsert = $pdo->prepare(
        end_time = VALUES(end_time)"
 );
 
-$taskUpsert = $pdo->prepare(
+$taskSelect = $pdo->prepare(
+    "SELECT id
+     FROM aufgaben
+     WHERE quelle_typ = :quelle_typ AND quelle_datum = :quelle_datum
+     LIMIT 1"
+);
+$taskInsert = $pdo->prepare(
     "INSERT INTO aufgaben (titel, details, faellig_am, gruppe_id, quelle_typ, quelle_datum)
-     VALUES (:titel, :details, :faellig_am, :gruppe_id, :quelle_typ, :quelle_datum)
-     ON DUPLICATE KEY UPDATE
-       titel = VALUES(titel),
-       details = VALUES(details),
-       faellig_am = VALUES(faellig_am),
-       gruppe_id = VALUES(gruppe_id)"
+     VALUES (:titel, :details, :faellig_am, :gruppe_id, :quelle_typ, :quelle_datum)"
+);
+$taskUpdate = $pdo->prepare(
+    "UPDATE aufgaben
+     SET titel = :titel,
+         details = :details,
+         faellig_am = :faellig_am,
+         gruppe_id = :gruppe_id
+     WHERE id = :id"
 );
 
 $inserted = 0;
@@ -190,14 +199,30 @@ try {
         ]);
 
         if ($load_restmuell && str_starts_with($summaryLower, 'rest')) {
-            $taskUpsert->execute([
+            $taskParams = [
                 ':titel' => 'Restmuell rausstellen',
                 ':details' => 'Bitte Restmuell rechtzeitig bereitstellen',
                 ':faellig_am' => $event['date'],
                 ':gruppe_id' => null,
                 ':quelle_typ' => 'restmuell',
                 ':quelle_datum' => $event['date'],
+            ];
+            $taskSelect->execute([
+                ':quelle_typ' => $taskParams[':quelle_typ'],
+                ':quelle_datum' => $taskParams[':quelle_datum'],
             ]);
+            $existingTaskId = $taskSelect->fetchColumn();
+            if ($existingTaskId) {
+                $taskUpdate->execute([
+                    ':id' => $existingTaskId,
+                    ':titel' => $taskParams[':titel'],
+                    ':details' => $taskParams[':details'],
+                    ':faellig_am' => $taskParams[':faellig_am'],
+                    ':gruppe_id' => $taskParams[':gruppe_id'],
+                ]);
+            } else {
+                $taskInsert->execute($taskParams);
+            }
         }
 
         $inserted++;
@@ -206,6 +231,17 @@ try {
     $cutoff = (new DateTimeImmutable('today'))->modify('-30 days')->format('Y-m-d');
     $cleanup = $pdo->prepare("DELETE FROM termine_abfall WHERE datum < :cutoff");
     $cleanup->execute([':cutoff' => $cutoff]);
+    $cleanupTasks = $pdo->prepare(
+        "DELETE a1
+         FROM aufgaben a1
+         JOIN aufgaben a2
+           ON a1.quelle_typ = a2.quelle_typ
+          AND a1.quelle_datum = a2.quelle_datum
+          AND a1.id > a2.id
+         WHERE a1.quelle_typ = 'restmuell'
+           AND a1.quelle_datum IS NOT NULL"
+    );
+    $cleanupTasks->execute();
 
     $pdo->commit();
     echo "OK. Upserted {$inserted}, skipped {$skipped}.\n";

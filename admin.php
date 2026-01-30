@@ -168,17 +168,24 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
             </thead>
             <tbody>
                 <?php if (count($configRows) === 0): ?>
-                    <tr><td colspan="2">Keine Einträge</td></tr>
+                    <tr><td colspan="2">Keine Eintr??ge</td></tr>
                 <?php else: ?>
                     <?php foreach ($configRows as $row): ?>
                         <tr>
                             <td><?php echo h($row['config_key']); ?></td>
-                            <td><?php echo h($row['config_value']); ?></td>
+                            <td>
+                                <form method="post" style="display:flex; gap:8px; align-items:center;">
+                                    <input type="hidden" name="action" value="config_save">
+                                    <input type="hidden" name="config_key" value="<?php echo h($row['config_key']); ?>">
+                                    <input type="text" name="config_value" value="<?php echo h($row['config_value']); ?>" style="min-width:180px;">
+                                    <button type="submit">Speichern</button>
+                                </form>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </tbody>
-        </table>
+</table>
 
         <h3>Effektive Werte</h3>
         <table>
@@ -276,5 +283,7 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
         </table>
     </div>
 </body>
-</html>
-
+</html>
+
+
+

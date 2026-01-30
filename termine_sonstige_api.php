@@ -18,7 +18,7 @@ try {
 }
 
 $appConfig = app_config_get($pdo);
-$days = (int)($appConfig['termine_sonstige_days'] ?? 14);
+$days = (int)($appConfig['termine_days'] ?? $appConfig['termine_sonstige_days'] ?? 14);
 if ($days <= 0) {
     $days = 14;
 }

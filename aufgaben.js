@@ -48,6 +48,47 @@ function getLabel(dateStr) {
     }
 }
 
+function parseDateLocal(dateStr) {
+    if (!dateStr) return null;
+    const parts = String(dateStr).split('-').map(n => parseInt(n, 10));
+    if (parts.length !== 3 || parts.some(n => Number.isNaN(n))) return null;
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+}
+
+function getShowFrom(task) {
+    if (!task || !task.due) return null;
+    const target = parseDateLocal(task.due);
+    if (!target) return null;
+    const isRein = task.source_type && String(task.source_type).toLowerCase().endsWith('_rein');
+    if (isRein) {
+        target.setHours(6, 0, 0, 0);
+        return target;
+    }
+    const start = new Date(target.getTime());
+    start.setDate(start.getDate() - 1);
+    start.setHours(0, 0, 0, 0);
+    return start;
+}
+
+function parseTimestamp(value) {
+    if (!value) return null;
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function shouldShowTask(task) {
+    const now = new Date();
+    const doneAt = parseTimestamp(task.done_at);
+    if (doneAt) {
+        const until = new Date(doneAt.getTime() + 10 * 60 * 1000);
+        return now <= until;
+    }
+    const showFrom = getShowFrom(task);
+    if (showFrom && now < showFrom) return false;
+    if (!task.due) return true;
+    return true;
+}
+
 function buildTasksSection(entries, interactive) {
     const title = '<div class="task-title">Aufgaben</div>';
     if (!Array.isArray(entries) || entries.length === 0) {
@@ -57,7 +98,15 @@ function buildTasksSection(entries, interactive) {
         };
     }
 
-    const rows = entries.map(task => {
+    const visibleEntries = entries.filter(task => shouldShowTask(task));
+    if (visibleEntries.length === 0) {
+        return {
+            html: `${title}<div class="task-row">Keine Aufgaben offen</div>`,
+            bind: null
+        };
+    }
+
+    const rows = visibleEntries.map(task => {
         const rowClasses = ['task-row'];
         if (interactive) rowClasses.push('task-clickable');
         if (task.done_by) rowClasses.push('task-row-done');

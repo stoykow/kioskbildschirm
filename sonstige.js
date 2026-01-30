@@ -230,7 +230,10 @@ function setSonstigeZuhause(terminId, userIds, clear) {
                 };
             });
             closeSonstigeModal();
-            renderSonstige();
+            window.hausordnungSonstigeEvents = sonstigeEventsCache;
+            if (typeof window.hausordnungRenderCombined === 'function') {
+                window.hausordnungRenderCombined();
+            }
         })
         .catch(() => {
             closeSonstigeModal();
@@ -258,12 +261,17 @@ function fetchSonstige() {
             }
             sonstigeEventsCache = data.events;
             sonstigeInteractive = true;
-            renderSonstige();
+            window.hausordnungSonstigeEvents = sonstigeEventsCache;
+            window.hausordnungSonstigeInteractive = true;
+            if (typeof window.hausordnungRenderCombined === 'function') {
+                window.hausordnungRenderCombined();
+            }
         })
         .catch(() => {
-            const sonstigeDiv = document.getElementById('sonstige');
-            if (sonstigeDiv) {
-                sonstigeDiv.textContent = 'Fehler beim Laden der sonstigen Termine';
+            window.hausordnungSonstigeEvents = [];
+            window.hausordnungSonstigeInteractive = false;
+            if (typeof window.hausordnungRenderCombined === 'function') {
+                window.hausordnungRenderCombined();
             }
         });
 }
@@ -271,3 +279,5 @@ function fetchSonstige() {
 window.hausordnungSonstige = {
     fetch: fetchSonstige
 };
+
+window.hausordnungBindSonstige = bindSonstigeRowHandlers;

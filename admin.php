@@ -103,6 +103,7 @@ $knownKeys = [
     'openweather_lon',
     'openweather_lang',
     'openweather_units',
+    'termine_days',
     'termine_sonstige_days',
     'termine_abfall_days',
     'snow_task_lead_hours',
@@ -198,7 +199,7 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
         </table>
     </div>
 
-    <h2>Sonstige Termine</h2>
+    <h2>Termine</h2>
     <div class="section">
         <form method="post">
             <input type="hidden" name="action" value="termin_save">

@@ -56,6 +56,37 @@ function parseDateLocal(dateStr) {
     return new Date(parts[0], parts[1] - 1, parts[2]);
 }
 
+function getShowFrom(dateStr) {
+    const target = parseDateLocal(dateStr);
+    if (!target) return null;
+    const start = new Date(target.getTime());
+    start.setDate(start.getDate() - 1);
+    start.setHours(0, 0, 0, 0);
+    return start;
+}
+
+function parseTimestamp(value) {
+    if (!value) return null;
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function shouldShowWasteEvent(eventItem, phase, ignoreShowFrom) {
+    const now = new Date();
+    if (!ignoreShowFrom) {
+        const showFrom = getShowFrom(eventItem.date);
+        if (showFrom && now < showFrom) return false;
+    }
+
+    const doneAtValue = phase === 'reinstellen' ? eventItem.rein_done_at : eventItem.done_at;
+    const doneAt = parseTimestamp(doneAtValue);
+    if (doneAt) {
+        const until = new Date(doneAt.getTime() + 10 * 60 * 1000);
+        return now <= until;
+    }
+    return true;
+}
+
 function getWastePhase(dateStr) {
     const target = parseDateLocal(dateStr);
     if (!target) return 'rausstellen';
@@ -87,52 +118,102 @@ function getDisplaySummary(summary, phase) {
     return `${base} reinstellen`;
 }
 
-function buildWasteSection(entries, interactive) {
-    if (!Array.isArray(entries) || entries.length == 0) {
-        return {
-            html: '',
-            bind: null
-        };
-    }
+function buildWasteRow(e, interactive) {
+    const isSchadstoff = String(e.summary || '').toLowerCase().startsWith('schadstoffmobil');
+    const phase = getWastePhase(e.date);
+    const rowClasses = ['waste-row'];
+    if (isSchadstoff) rowClasses.push('waste-row-muted');
+    if (interactive && !isSchadstoff) rowClasses.push('waste-clickable');
+    const time = e.start ? `<span class="waste-time">${escapeHtml(e.start)}${e.end ? ' - ' + escapeHtml(e.end) : ''}</span>` : '';
+    const dataAttr = interactive && !isSchadstoff && e.id ? `data-event-id="${e.id}"` : '';
+    return `
+        <div class="${rowClasses.join(' ')}" ${dataAttr}>
+            <span class="waste-date">${escapeHtml(getDisplayLabel(e.date, phase))}</span>
+            <span class="waste-type">${escapeHtml(getDisplaySummary(e.summary, phase))}</span>
+            ${time}
+        </div>
+    `;
+}
 
-    const upcoming = entries
-        .sort((a, b) => new Date(a.date) - new Date(b.date))
-        .slice(0, 3);
+function buildSonstigeRow(e, interactive) {
+    const rowClasses = ['sonstige-row'];
+    if (interactive) rowClasses.push('sonstige-clickable');
+    const dataAttr = interactive && e.id ? `data-termin-id="${e.id}"` : '';
+    const time = e.start ? `<span class="sonstige-time">${escapeHtml(e.start)}${e.end ? ' - ' + escapeHtml(e.end) : ''}</span>` : '';
+    const hint = e.hint ? `<span class="sonstige-hint">${escapeHtml(e.hint)}</span>` : '';
+    const needsHome = !!e.requires_home;
+    const hasHome = e.zuhause_by && String(e.zuhause_by).trim() !== '';
+    const showStatus = needsHome;
+    const statusClass = hasHome ? 'sonstige-status' : 'sonstige-status sonstige-status-warn';
+    const statusText = hasHome ? `Zuhause: ${escapeHtml(e.zuhause_by)}` : 'Keiner zuhause';
+    const statusHtml = showStatus ? `<span class="${statusClass}">${statusText}</span>` : '';
+    return `
+        <div class="${rowClasses.join(' ')}" ${dataAttr}>
+            <span class="sonstige-date">${escapeHtml(getLabel(e.date))}</span>
+            <span class="sonstige-type">${escapeHtml(e.title)}</span>
+            ${hint}
+            ${time}
+            ${statusHtml}
+        </div>
+    `;
+}
 
-    if (upcoming.length === 0) {
+function buildTermineSection(wasteEntries, sonstigeEntries, interactiveWaste, interactiveSonstige) {
+    const wasteList = Array.isArray(wasteEntries) ? wasteEntries : [];
+    const sonstigeList = Array.isArray(sonstigeEntries) ? sonstigeEntries : [];
+    if (wasteList.length === 0 && sonstigeList.length === 0) {
         return { html: '', bind: null };
     }
 
+    const combined = [];
+    wasteList.forEach(item => {
+        const phase = getWastePhase(item.date);
+        if (!shouldShowWasteEvent(item, phase, true)) return;
+        combined.push({
+            type: 'waste',
+            date: item.date,
+            time: item.start || '',
+            data: item
+        });
+    });
+    sonstigeList.forEach(item => {
+        combined.push({
+            type: 'sonstige',
+            date: item.date,
+            time: item.start || '',
+            data: item
+        });
+    });
+
+    if (combined.length === 0) {
+        return { html: '', bind: null };
+    }
+
+    combined.sort((a, b) => {
+        const da = new Date(`${a.date}T${a.time || '00:00'}`);
+        const db = new Date(`${b.date}T${b.time || '00:00'}`);
+        if (da < db) return -1;
+        if (da > db) return 1;
+        return String(a.type).localeCompare(String(b.type));
+    });
+
     const html = `
-        <div class="waste-title">Abfallkalender</div>
-        ${upcoming.map(e => {
-            const isSchadstoff = String(e.summary || '').toLowerCase().startsWith('schadstoffmobil');
-            const phase = getWastePhase(e.date);
-            const doneBy = phase === 'reinstellen' ? e.rein_done_by : e.done_by;
-            const showStatus = !isSchadstoff;
-            const rowClasses = ['waste-row'];
-            if (isSchadstoff) rowClasses.push('waste-row-muted');
-            if (interactive && !isSchadstoff) rowClasses.push('waste-clickable');
-            if (showStatus && doneBy) rowClasses.push('waste-done-row');
-            const statusClass = doneBy ? 'waste-status waste-status-done' : 'waste-status waste-status-open';
-            const statusText = doneBy ? `Erledigt: ${escapeHtml(doneBy)}` : 'Unerledigt';
-            const doneBadge = showStatus ? `<span class="${statusClass}">${statusText}</span>` : '';
-            const time = e.start ? `<span class="waste-time">${escapeHtml(e.start)}${e.end ? ' - ' + escapeHtml(e.end) : ''}</span>` : '';
-            const dataAttr = interactive && !isSchadstoff && e.id ? `data-event-id="${e.id}"` : '';
-            return `
-                <div class="${rowClasses.join(' ')}" ${dataAttr}>
-                    <span class="waste-date">${escapeHtml(getDisplayLabel(e.date, phase))}</span>
-                    <span class="waste-type">${escapeHtml(getDisplaySummary(e.summary, phase))}</span>
-                    ${time}
-                    ${doneBadge}
-                </div>
-            `;
-        }).join('')}
+        <div class="waste-title">Termine</div>
+        ${combined.map(item => (
+            item.type === 'waste'
+                ? buildWasteRow(item.data, interactiveWaste)
+                : buildSonstigeRow(item.data, interactiveSonstige)
+        )).join('')}
     `;
 
     return {
-        html: html,
-        bind: interactive ? bindWasteRowHandlers : null
+        html,
+        bind: () => {
+            if (interactiveWaste) bindWasteRowHandlers();
+            if (interactiveSonstige && typeof window.hausordnungBindSonstige === 'function') {
+                window.hausordnungBindSonstige();
+            }
+        }
     };
 }
 
@@ -144,16 +225,18 @@ function getTasksSection() {
 }
 
 function renderCombined() {
-    const wasteDiv = document.getElementById('waste');
-    if (!wasteDiv) return;
-    const wasteSection = buildWasteSection(wasteEventsCache, wasteInteractive);
+    const termineDiv = document.getElementById('termine');
+    if (!termineDiv) return;
+    const sonstigeEntries = window.hausordnungSonstigeEvents || [];
+    const sonstigeInteractive = window.hausordnungSonstigeInteractive === true;
+    const termineSection = buildTermineSection(wasteEventsCache, sonstigeEntries, wasteInteractive, sonstigeInteractive);
     const tasksSection = getTasksSection();
-    if (!wasteSection.html) {
-        wasteDiv.innerHTML = tasksSection.html;
+    if (!termineSection.html) {
+        termineDiv.innerHTML = tasksSection.html;
     } else {
-        wasteDiv.innerHTML = `${wasteSection.html}${tasksSection.html}`;
+        termineDiv.innerHTML = `${termineSection.html}${tasksSection.html}`;
     }
-    if (wasteSection.bind) wasteSection.bind();
+    if (termineSection.bind) termineSection.bind();
     if (tasksSection.bind) tasksSection.bind();
 }
 
@@ -377,7 +460,10 @@ function fetchWaste() {
                     renderCombined();
                 })
                 .catch(error => {
-                    document.getElementById('waste').textContent = 'Fehler beim Laden des Abfallkalenders';
+                    const target = document.getElementById('termine');
+                    if (target) {
+                        target.textContent = 'Fehler beim Laden der Termine';
+                    }
                     console.error('Fehler beim Laden des Abfallkalenders:', error);
                 });
         });

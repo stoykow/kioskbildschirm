@@ -24,6 +24,31 @@ if (!in_array($action, ['rausstellen', 'reinstellen'], true)) {
     exit;
 }
 
+function normalize_lower($value) {
+    $value = is_string($value) ? $value : '';
+    if (function_exists('mb_strtolower')) {
+        return mb_strtolower($value, 'UTF-8');
+    }
+    return strtolower($value);
+}
+
+function get_rein_task_info($summary) {
+    $lower = normalize_lower($summary);
+    if (str_starts_with($lower, 'rest')) {
+        return ['type' => 'restmuell', 'title' => 'Restmuell reinstellen'];
+    }
+    if (str_contains($lower, 'papier') || str_contains($lower, 'blau')) {
+        return ['type' => 'papier', 'title' => 'Papiertonne reinstellen'];
+    }
+    if (str_contains($lower, 'gelb') || str_contains($lower, 'gelbe')) {
+        return ['type' => 'gelb', 'title' => 'Gelbe Tonne reinstellen'];
+    }
+    if (str_starts_with($lower, 'bio')) {
+        return ['type' => 'bio', 'title' => 'Biotonne reinstellen'];
+    }
+    return null;
+}
+
 if ($eventId <= 0 || (!$markUndone && $userId <= 0 && !is_array($userIds))) {
     http_response_code(400);
     echo json_encode(['error' => 'event_id erforderlich (und user_id(s) zum Erledigen)']);
@@ -70,9 +95,10 @@ try {
         }
     }
 
-    $checkEvent = $pdo->prepare("SELECT id FROM termine_abfall WHERE id = :id LIMIT 1");
+    $checkEvent = $pdo->prepare("SELECT id, datum, summary FROM termine_abfall WHERE id = :id LIMIT 1");
     $checkEvent->execute([':id' => $eventId]);
-    if (!$checkEvent->fetch()) {
+    $eventRow = $checkEvent->fetch(PDO::FETCH_ASSOC);
+    if (!$eventRow) {
         $pdo->rollBack();
         http_response_code(400);
         echo json_encode(['error' => 'Unbekannter Termin']);
@@ -118,6 +144,39 @@ try {
                  WHERE id = :event_id"
             );
             $upd->execute([':event_id' => $eventId]);
+        }
+    }
+
+    if ($action === 'rausstellen') {
+        $taskInfo = get_rein_task_info($eventRow['summary'] ?? '');
+        if ($taskInfo) {
+            $taskType = $taskInfo['type'] . '_rein';
+            $taskDate = $eventRow['datum'];
+            if ($markUndone) {
+                $delTask = $pdo->prepare(
+                    "DELETE FROM aufgaben
+                     WHERE quelle_typ = :typ AND quelle_datum = :datum"
+                );
+                $delTask->execute([':typ' => $taskType, ':datum' => $taskDate]);
+            } else {
+                $taskUpsert = $pdo->prepare(
+                    "INSERT INTO aufgaben (titel, details, faellig_am, gruppe_id, quelle_typ, quelle_datum)
+                     VALUES (:titel, :details, :faellig_am, :gruppe_id, :quelle_typ, :quelle_datum)
+                     ON DUPLICATE KEY UPDATE
+                       titel = VALUES(titel),
+                       details = VALUES(details),
+                       faellig_am = VALUES(faellig_am),
+                       gruppe_id = VALUES(gruppe_id)"
+                );
+                $taskUpsert->execute([
+                    ':titel' => $taskInfo['title'],
+                    ':details' => 'Bitte nach Leerung wieder reinstellen',
+                    ':faellig_am' => $taskDate,
+                    ':gruppe_id' => null,
+                    ':quelle_typ' => $taskType,
+                    ':quelle_datum' => $taskDate,
+                ]);
+            }
         }
     }
 

@@ -48,7 +48,7 @@ body {
     padding: clamp(0.6rem, 1.1vw, 1.2rem);
 }
 
-#weather, #waste, #sonstige, #train, #tram, #bus {
+#weather, #termine, #train, #tram, #bus {
     min-width: 0;
     width: 100%;
 }
@@ -696,7 +696,7 @@ body {
         margin: 0;
     }
     
-    #weather, #waste, #sonstige, #train, #tram, #bus {
+    #weather, #termine, #train, #tram, #bus {
         min-width: auto;
         width: 100%;
     }

@@ -1,0 +1,54 @@
+name: Test und Upload
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Docker-Image bauen
+        run: docker build -t hausordnung-kiosk .
+
+      - name: PHP-Syntax im Container prüfen
+        run: |
+          docker run --rm hausordnung-kiosk sh -lc 'find /var/www/html -name "*.php" -print0 | xargs -0 -n1 php -l'
+
+      - name: Upload-Paket vorbereiten
+        run: |
+          mkdir upload
+          find . -maxdepth 1 -type f \( -name "*.php" -o -name "*.js" -o -name "*.css" -o -name "*.sql" -o -name "README.md" \) -exec cp {} upload/ \;
+
+      - name: Projektdateien als Artifact hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: hausordnung-kiosk
+          path: upload/
+          retention-days: 7
+
+  upload:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: self-hosted
+
+    steps:
+      - name: Artifact herunterladen
+        uses: actions/download-artifact@v4
+        with:
+          name: hausordnung-kiosk
+          path: upload/
+
+      - name: Upload per FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          port: ${{ secrets.FTP_PORT }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: upload/
+          server-dir: ${{ secrets.FTP_SERVER_DIR }}

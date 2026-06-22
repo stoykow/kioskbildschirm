@@ -1,0 +1,24 @@
+{
+  "name": "hausordnung-ftp",
+  "host": "192.168.112.30",
+  "protocol": "ftp",
+  "port": 28832,
+  "username": "ftpuser",
+  "password": "NICHT_IN_GIT_SPEICHERN",
+  "remotePath": "/",
+  "uploadOnSave": true,
+  "syncMode": "update",
+  "watcher": {
+    "files": "**/*",
+    "autoUpload": true,
+    "autoDelete": false
+  },
+  "ignore": [
+    ".vscode",
+    ".git",
+    ".gitignore",
+    "README.md",
+    "node_modules",
+    "*.log"
+  ]
+}

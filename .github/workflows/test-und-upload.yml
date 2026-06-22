@@ -13,7 +13,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Docker-Image bauen
-        run: docker build -t hausordnung-kiosk .
+        run: docker build -f docker/Dockerfile -t hausordnung-kiosk .
 
       - name: PHP-Syntax im Container prüfen
         run: |
@@ -26,7 +26,9 @@ jobs:
           cp .htaccess upload/htdocs/
           cp schema.sql upload/database/
           cp database/init/001-schema.sql upload/database/init/
-          cp docker-compose.yml .env.example README.md upload/
+          mkdir -p upload/docker
+          cp docker/docker-compose.yml docker/.env.example upload/docker/
+          cp README.md upload/
 
       - name: Projektdateien als Artifact hochladen
         uses: actions/upload-artifact@v4

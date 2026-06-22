@@ -1,3 +1,5 @@
+name: hausordnung
+
 services:
   db:
     image: mariadb:10.11
@@ -45,3 +47,18 @@ services:
       PMA_HOST: db
     ports:
       - "${PHPMYADMIN_PORT:-28831}:80"
+
+  ftp:
+    image: delfer/alpine-ftp-server:latest
+    container_name: hausordnung-ftp
+    restart: unless-stopped
+    environment:
+      USERS: "${FTP_USER}|${FTP_PASS}|/home/${FTP_USER}"
+      ADDRESS: ${FTP_PUBLIC_HOST:-192.168.112.30}
+      MIN_PORT: ${FTP_PASSIVE_MIN_PORT:-28833}
+      MAX_PORT: ${FTP_PASSIVE_MAX_PORT:-28842}
+    volumes:
+      - /srv/docker/hausordnung/data/htdocs:/home/${FTP_USER}
+    ports:
+      - "${FTP_PORT:-28832}:21"
+      - "${FTP_PASSIVE_MIN_PORT:-28833}-${FTP_PASSIVE_MAX_PORT:-28842}:${FTP_PASSIVE_MIN_PORT:-28833}-${FTP_PASSIVE_MAX_PORT:-28842}"

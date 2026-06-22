@@ -3,14 +3,17 @@
 
 async function fetchTrains() {
     const trainDiv = document.getElementById('train');
+    trainDiv.dataset.usesReplacementBus = '0';
     trainDiv.textContent = 'Lädt Zugdaten...';
     try {
         const response = await fetch('abfahrten.php?typ=zug&limit=6');
         let trainOnly = await response.json();
+        let usesReplacementBus = false;
 
         if (!Array.isArray(trainOnly) || trainOnly.length === 0) {
-            const fallbackResponse = await fetch('abfahrten.php?typ=bus&limit=6');
+            const fallbackResponse = await fetch('abfahrten.php?typ=ersatzverkehr&limit=6');
             trainOnly = await fallbackResponse.json();
+            usesReplacementBus = true;
         }
 
         const trainsWithDirection = trainOnly.filter(dep => dep && String(dep.richtung || '').trim() !== '');
@@ -20,8 +23,11 @@ async function fetchTrains() {
             return;
         }
 
+        trainDiv.dataset.usesReplacementBus = usesReplacementBus ? '1' : '0';
+        const title = usesReplacementBus ? 'Ersatzverkehr ab Görlitz Hbf' : 'Züge ab Görlitz Hbf';
+
         trainDiv.innerHTML = `
-            <div class="train-title">Züge / Ersatzverkehr ab Görlitz Hbf</div>
+            <div class="train-title">${title}</div>
             ` + trainsWithDirection.slice(0, 6).map(dep => {
             const time = dep.anzeige_zeit || new Date(dep.tatsaechliche_zeit || dep.geplante_zeit).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
             const line = dep.linie || '';
@@ -86,12 +92,14 @@ async function fetchBus() {
         const departures = await response.json();
 
         if (!Array.isArray(departures) || departures.length === 0) {
+            busDiv.style.display = '';
             busDiv.textContent = 'Keine Bus-Abfahrten gefunden.';
             return;
         }
 
+        busDiv.style.display = '';
         busDiv.innerHTML = `
-            <div class="train-title">Bus ab Bahnhof</div>
+            <div class="train-title">Bus ab Busbahnhof</div>
             ` + departures.slice(0, 6).map(dep => {
             const time = dep.anzeige_zeit || new Date(dep.tatsaechliche_zeit || dep.geplante_zeit).toLocaleTimeString('de-DE', {
                 hour: '2-digit',

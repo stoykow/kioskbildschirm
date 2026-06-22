@@ -38,6 +38,10 @@ switch ($type) {
         $modeCondition = "l.produkt = 'tram'";
         break;
     case 'bus':
+        $stopExternalId = '977192';
+        $modeCondition = "l.produkt = 'bus'";
+        break;
+    case 'ersatzverkehr':
         $stopExternalId = '8010131';
         $modeCondition = "l.produkt = 'bus'";
         break;

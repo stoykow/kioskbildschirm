@@ -1,27 +1,47 @@
 services:
-  app:
-    build: .
-    ports:
-      - "${APP_PORT:-28830}:80"
+  db:
+    image: mariadb:10.11
+    container_name: hausordnung-db
+    restart: unless-stopped
     environment:
-      DB_HOST: db
-      DB_NAME: hausordnung
-      DB_USER: hausordnung
-      DB_PASS: hausordnung
-      OPENWEATHER_API: ${OPENWEATHER_API:-}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${MARIADB_DATABASE}
+      MARIADB_USER: ${MARIADB_USER}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+    volumes:
+      - /srv/docker/hausordnung/data/db:/var/lib/mysql
+      - /srv/docker/hausordnung/data/initdb:/docker-entrypoint-initdb.d:ro
+
+  app:
+    image: php:8.3-apache
+    container_name: hausordnung-app
+    restart: unless-stopped
     depends_on:
       - db
-
-  db:
-    image: mariadb:11
     environment:
-      MARIADB_DATABASE: hausordnung
-      MARIADB_USER: hausordnung
-      MARIADB_PASSWORD: hausordnung
-      MARIADB_ROOT_PASSWORD: root
+      DB_HOST: db
+      DB_NAME: ${MARIADB_DATABASE}
+      DB_USER: ${MARIADB_USER}
+      DB_PASS: ${MARIADB_PASSWORD}
+      HO_TOKEN: ${HO_TOKEN}
+      OPENWEATHER_API: ${OPENWEATHER_API}
+      FTP_USER: ${FTP_USER}
+      FTP_PASS: ${FTP_PASS}
     volumes:
-      - db_data:/var/lib/mysql
-      - ./schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+      - /srv/docker/hausordnung/data/htdocs:/var/www/html
+      - /srv/docker/hausordnung/data/php.ini:/usr/local/etc/php/php.ini
+    command: >
+      sh -c "docker-php-ext-install curl mysqli pdo_mysql && apache2-foreground"
+    ports:
+      - "${APP_PORT:-28830}:80"
 
-volumes:
-  db_data:
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: hausordnung-phpmyadmin
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      PMA_HOST: db
+    ports:
+      - "${PHPMYADMIN_PORT:-28831}:80"

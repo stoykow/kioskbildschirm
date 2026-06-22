@@ -28,6 +28,11 @@ $stops = [
         'name' => 'Lutherstraße',
         'transports' => ['BUS', 'TRAM', 'REGIONAL'],
     ],
+    [
+        'external_id' => '977192',
+        'name' => 'Busbahnhof, Görlitz',
+        'transports' => ['BUS'],
+    ],
 ];
 
 $pdo->beginTransaction();

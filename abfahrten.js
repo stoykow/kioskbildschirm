@@ -6,22 +6,22 @@ async function fetchTrains() {
     trainDiv.textContent = 'Lädt Zugdaten...';
     try {
         const response = await fetch('abfahrten.php?typ=zug&limit=6');
-        const trainOnly = await response.json();
+        let trainOnly = await response.json();
 
         if (!Array.isArray(trainOnly) || trainOnly.length === 0) {
-            trainDiv.textContent = 'Keine Zugabfahrten gefunden.';
-            return;
+            const fallbackResponse = await fetch('abfahrten.php?typ=bus&limit=6');
+            trainOnly = await fallbackResponse.json();
         }
 
         const trainsWithDirection = trainOnly.filter(dep => dep && String(dep.richtung || '').trim() !== '');
 
         if (trainsWithDirection.length === 0) {
-            trainDiv.textContent = 'Keine Zugabfahrten gefunden.';
+            trainDiv.textContent = 'Keine Zug-/Ersatzverkehr-Abfahrten gefunden.';
             return;
         }
 
         trainDiv.innerHTML = `
-            <div class="train-title">Züge ab Görlitz Hbf</div>
+            <div class="train-title">Züge / Ersatzverkehr ab Görlitz Hbf</div>
             ` + trainsWithDirection.slice(0, 6).map(dep => {
             const time = dep.anzeige_zeit || new Date(dep.tatsaechliche_zeit || dep.geplante_zeit).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
             const line = dep.linie || '';

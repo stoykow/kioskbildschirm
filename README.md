@@ -37,13 +37,23 @@ API/Endpoints:
 Auf dem Docker-Host ausführen:
 
 ```bash
-docker compose up --build -d
+docker compose -f docker/docker-compose.yml --env-file docker/.env up -d
 ```
 
 Wenn Docker auf `192.168.112.30` läuft, ist die Anwendung im lokalen Netz unter
 dieser Adresse erreichbar:
 
 `http://192.168.112.30:28830/`
+
+FTP für Uploads läuft auf:
+
+`192.168.112.30:28832`
+
+Der FTP-Container schreibt direkt in:
+
+`/srv/docker/hausordnung/data/htdocs`
+
+Für passives FTP werden zusätzlich die Ports `28833-28842` verwendet.
 
 Die Datenbankstruktur liegt in `schema.sql` und zusätzlich in
 `database/init/001-schema.sql`.
@@ -75,7 +85,7 @@ gesetzt werden.
 Import manuell auf dem Docker-Host im Container ausführen:
 
 ```bash
-docker compose exec app php cron_abfahrten.php
+docker compose -f docker/docker-compose.yml --env-file docker/.env exec app php cron_abfahrten.php
 ```
 
 Import per Browser ausführen:
@@ -115,8 +125,8 @@ Für GitHub Actions müssen diese Repository-Secrets angelegt werden:
 - `FTP_PASS`
 - `FTP_SERVER_DIR`
 
-`.env.example` zeigt die benötigten Namen. Die echte `.env` bleibt lokal und
-wird nicht mit Git hochgeladen.
+`docker/.env.example` zeigt die benötigten Namen. Die echte `.env` bleibt lokal
+auf dem Docker-Host und wird nicht mit Git hochgeladen.
 
 Die bisherige Datei `.vscode/sftp.json` ist lokal und wird ignoriert. Als Muster
 liegt `.vscode/sftp.example.json` ohne echtes Passwort bei. Zugangsdaten gehören

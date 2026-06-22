@@ -1,0 +1,5 @@
+<FilesMatch "^(\.|.*\.(sql|env|ini|yml|yaml|json|md|lock|log)$|Dockerfile$)">
+  Require all denied
+</FilesMatch>
+
+Options -Indexes

@@ -21,8 +21,12 @@ jobs:
 
       - name: Upload-Paket vorbereiten
         run: |
-          mkdir upload
-          find . -maxdepth 1 -type f \( -name "*.php" -o -name "*.js" -o -name "*.css" -o -name "*.sql" -o -name "README.md" \) -exec cp {} upload/ \;
+          mkdir -p upload/htdocs upload/database/init
+          find . -maxdepth 1 -type f \( -name "*.php" -o -name "*.js" -o -name "*.css" -o -name "*.ics" \) -exec cp {} upload/htdocs/ \;
+          cp .htaccess upload/htdocs/
+          cp schema.sql upload/database/
+          cp database/init/001-schema.sql upload/database/init/
+          cp docker-compose.yml .env.example README.md upload/
 
       - name: Projektdateien als Artifact hochladen
         uses: actions/upload-artifact@v4
@@ -48,7 +52,7 @@ jobs:
         with:
           server: ${{ secrets.FTP_SERVER }}
           port: ${{ secrets.FTP_PORT }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: upload/
+          username: ${{ secrets.FTP_USER }}
+          password: ${{ secrets.FTP_PASS }}
+          local-dir: upload/htdocs/
           server-dir: ${{ secrets.FTP_SERVER_DIR }}

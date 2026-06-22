@@ -5,3 +5,4 @@
 !.env.example
 node_modules
 vendor
+/database/init/*.local.sql

@@ -52,7 +52,7 @@ switch ($type) {
 }
 
 $stmt = $pdo->prepare(
-    "SELECT
+    "SELECT DISTINCT
         a.geplante_zeit,
         a.tatsaechliche_zeit,
         a.richtung,

@@ -45,10 +45,27 @@ dieser Adresse erreichbar:
 
 `http://192.168.112.30:28830/`
 
-Die Datenbank wird über `schema.sql` initialisiert. Die Docker-Umgebung nutzt
-die Beispielwerte aus `docker-compose.yml`. Der veröffentlichte Port kann über
-`APP_PORT` in einer lokalen `.env` geändert werden. Für echte OpenWeather-Daten
-kann `OPENWEATHER_API` ebenfalls über `.env` gesetzt werden.
+Die Datenbankstruktur liegt in `schema.sql` und zusätzlich in
+`database/init/001-schema.sql`.
+
+Für eine frische MariaDB-Installation auf dem Docker-Host:
+
+```bash
+mkdir -p /srv/docker/hausordnung/data/htdocs
+mkdir -p /srv/docker/hausordnung/data/db
+mkdir -p /srv/docker/hausordnung/data/initdb
+cp database/init/001-schema.sql /srv/docker/hausordnung/data/initdb/001-schema.sql
+```
+
+Die SQL-Datei wird nur beim ersten Start einer leeren MariaDB-Datenbank
+automatisch importiert. Bei einer bereits bestehenden Datenbank kann sie über
+phpMyAdmin importiert werden:
+
+`http://192.168.112.30:28831/`
+
+Der veröffentlichte Port kann über `APP_PORT` in einer lokalen `.env` geändert
+werden. Für echte OpenWeather-Daten kann `OPENWEATHER_API` ebenfalls über `.env`
+gesetzt werden.
 
 ## Abfahrten-Import
 
@@ -87,15 +104,15 @@ Die Datei `.github/workflows/test-und-upload.yml` zeigt einen einfachen Ablauf:
 - Repository auschecken
 - Docker-Image bauen
 - PHP-Syntax im Container prüfen
-- Projektdateien als Artifact `hausordnung-kiosk` hochladen
-- optional bei Push auf `main` per FTP über einen Self-hosted Runner hochladen
+- Projektdateien inklusive DB-Schema als Artifact `hausordnung-kiosk` hochladen
+- bei Push auf `main` nur die Webdateien per FTP nach `htdocs` hochladen
 
 Für GitHub Actions müssen diese Repository-Secrets angelegt werden:
 
 - `FTP_SERVER`
 - `FTP_PORT`
-- `FTP_USERNAME`
-- `FTP_PASSWORD`
+- `FTP_USER`
+- `FTP_PASS`
 - `FTP_SERVER_DIR`
 
 `.env.example` zeigt die benötigten Namen. Die echte `.env` bleibt lokal und
@@ -109,6 +126,29 @@ Hinweis: `192.168.112.30` ist eine private LAN-Adresse. Deshalb läuft der
 Upload-Job im Workflow auf `runs-on: self-hosted`. Dieser Runner muss im gleichen
 Netz wie der Docker-/FTP-Host laufen. Der Test-Job kann weiterhin auf
 `ubuntu-latest` bei GitHub laufen.
+
+## GitHub-Projekt anlegen
+
+Auf diesem Rechner ist die GitHub CLI (`gh`) aktuell nicht installiert. Direktes
+Anlegen aus der Konsole ist deshalb hier nicht möglich. Vorgehen über GitHub:
+
+1. Neues Repository auf GitHub anlegen, z. B. `hausordnung-kiosk`.
+2. Dieses Projekt als neues Remote hinzufügen:
+
+```bash
+git remote add github https://github.com/DEIN-NAME/hausordnung-kiosk.git
+git push -u github main
+```
+
+3. In GitHub unter `Settings` -> `Secrets and variables` -> `Actions` die
+Secrets `FTP_SERVER`, `FTP_PORT`, `FTP_USER`, `FTP_PASS` und `FTP_SERVER_DIR`
+anlegen.
+
+Wenn `gh` später installiert und angemeldet ist:
+
+```bash
+gh repo create DEIN-NAME/hausordnung-kiosk --private --source . --remote github --push
+```
 
 ## Datenbank - Tabellen (wichtigste)
 Bestehende Kern-Tabellen:

@@ -31,7 +31,7 @@ services:
       - /srv/docker/hausordnung/data/htdocs:/var/www/html
       - /srv/docker/hausordnung/data/php.ini:/usr/local/etc/php/php.ini
     command: >
-      sh -c "docker-php-ext-install curl mysqli pdo_mysql && apache2-foreground"
+      sh -c "docker-php-ext-install mysqli pdo_mysql && apache2-foreground"
     ports:
       - "${APP_PORT:-28830}:80"
 

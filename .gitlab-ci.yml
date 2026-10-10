@@ -1,0 +1,65 @@
+stages:
+  - test
+  - package
+  - deploy
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS && $CI_PIPELINE_SOURCE == "push"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH'
+
+default:
+  tags:
+    - hausordnung-lan
+
+variables:
+  FTP_SERVER: "192.168.112.30"
+  FTP_PORT: "28832"
+  FTP_SERVER_DIR: "/"
+  APP_URL: "http://192.168.112.30:28830/"
+
+php-syntax:
+  stage: test
+  image: php:8.3-cli
+  script:
+    - for file in ./*.php; do php -l "$file" || exit 1; done
+
+javascript-syntax:
+  stage: test
+  image: node:22-alpine
+  script:
+    - for file in ./*.js; do node --check "$file" || exit 1; done
+
+deployment-tests:
+  stage: test
+  image: python:3.13-alpine
+  script:
+    - python -m unittest discover -s ci -p 'test_*.py' -v
+
+web-package:
+  stage: package
+  image: python:3.13-alpine
+  script:
+    - python ci/package.py
+  artifacts:
+    name: "hausordnung-$CI_COMMIT_SHORT_SHA"
+    paths:
+      - upload/htdocs/
+    expire_in: 7 days
+
+deploy-production:
+  stage: deploy
+  image: python:3.13-alpine
+  dependencies:
+    - web-package
+  resource_group: hausordnung-production
+  environment:
+    name: production
+    url: $APP_URL
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web")'
+  script:
+    - python ci/ftp_upload.py upload/htdocs
+    - python ci/verify.py --refresh-departures

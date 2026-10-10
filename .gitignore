@@ -5,3 +5,5 @@
 !docker/.env.example
 node_modules/
 vendor/
+upload/
+__pycache__/

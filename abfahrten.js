@@ -1,17 +1,20 @@
 // abfahrten.js
 // Zug/Tram/Bus Abfahrten laden
 
+const departureLimits = window.kioskDepartureLimits;
+
 async function fetchTrains() {
     const trainDiv = document.getElementById('train');
     trainDiv.dataset.usesReplacementBus = '0';
     trainDiv.textContent = 'Lädt Zugdaten...';
+    const limit = departureLimits.zug;
     try {
-        const response = await fetch('abfahrten.php?typ=zug&limit=6');
+        const response = await fetch(`abfahrten.php?typ=zug&limit=${limit}`);
         let trainOnly = await response.json();
         let usesReplacementBus = false;
 
         if (!Array.isArray(trainOnly) || trainOnly.length === 0) {
-            const fallbackResponse = await fetch('abfahrten.php?typ=ersatzverkehr&limit=6');
+            const fallbackResponse = await fetch(`abfahrten.php?typ=ersatzverkehr&limit=${limit}`);
             trainOnly = await fallbackResponse.json();
             usesReplacementBus = true;
         }
@@ -28,7 +31,7 @@ async function fetchTrains() {
 
         trainDiv.innerHTML = `
             <div class="train-title">${title}</div>
-            ` + trainsWithDirection.slice(0, 6).map(dep => {
+            ` + trainsWithDirection.slice(0, limit).map(dep => {
             const time = dep.anzeige_zeit || new Date(dep.tatsaechliche_zeit || dep.geplante_zeit).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
             const line = dep.linie || '';
             const direction = dep.richtung || '';
@@ -51,8 +54,9 @@ async function fetchTrains() {
 async function fetchTrams() {
     const tramDiv = document.getElementById('tram');
     tramDiv.textContent = 'Lädt Straßenbahn-Abfahrten...';
+    const limit = departureLimits.tram;
     try {
-        const response = await fetch('abfahrten.php?typ=tram&limit=2');
+        const response = await fetch(`abfahrten.php?typ=tram&limit=${limit}`);
         const departures = await response.json();
 
         if (!Array.isArray(departures) || departures.length === 0) {
@@ -62,7 +66,7 @@ async function fetchTrams() {
 
         tramDiv.innerHTML = `
             <div class="train-title">Tram ab Lutherstraße</div>
-            ` + departures.slice(0, 2).map(dep => {
+            ` + departures.slice(0, limit).map(dep => {
             const time = dep.anzeige_zeit || new Date(dep.tatsaechliche_zeit || dep.geplante_zeit).toLocaleTimeString('de-DE', {
                 hour: '2-digit',
                 minute: '2-digit'
@@ -87,20 +91,21 @@ async function fetchTrams() {
 async function fetchBus() {
     const busDiv = document.getElementById('bus');
     busDiv.textContent = 'Lädt Bus-Abfahrten...';
+    const limit = departureLimits.bus;
     try {
-        const response = await fetch('abfahrten.php?typ=bus&limit=6');
+        const response = await fetch(`abfahrten.php?typ=bus&limit=${limit}`);
         const departures = await response.json();
 
         if (!Array.isArray(departures) || departures.length === 0) {
             busDiv.style.display = '';
-            busDiv.textContent = 'Keine Stadtbus-Abfahrten ab Bahnhof Südausgang gefunden.';
+            busDiv.textContent = 'Keine Bus-Abfahrten ab Bahnhof Südausgang gefunden.';
             return;
         }
 
         busDiv.style.display = '';
         busDiv.innerHTML = `
-            <div class="train-title">Stadtbus ab Bahnhof Südausgang</div>
-            ` + departures.slice(0, 6).map(dep => {
+            <div class="train-title">Bus ab Bahnhof Südausgang</div>
+            ` + departures.slice(0, limit).map(dep => {
             const time = dep.anzeige_zeit || new Date(dep.tatsaechliche_zeit || dep.geplante_zeit).toLocaleTimeString('de-DE', {
                 hour: '2-digit',
                 minute: '2-digit'

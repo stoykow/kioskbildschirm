@@ -164,12 +164,12 @@ deploy-production:
         echo "OK: $endpoint"
       done
       for kind in zug ersatzverkehr tram bus; do
-        fetch "abfahrten.php?typ=$kind&limit=6"
+        fetch "abfahrten.php?typ=$kind"
         jq -e --arg kind "$kind" '
           type == "array" and all(.[];
             type == "object" and (.anzeige_zeit | type == "string" and length > 0)
             and (if $kind == "bus" then
-              .produkt == "bus" and (.linie as $line | ["A","B","C","D","E","F","N"] | index($line) != null)
+              .produkt == "bus" and (.linie as $line | ["A","B","C","D","E","F","N","62","67"] | index($line) != null)
             else true end))
         ' "$check_dir/response" > /dev/null
         echo "OK: Abfahrten $kind ($(jq length "$check_dir/response") Einträge)"

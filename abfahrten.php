@@ -18,10 +18,13 @@ try {
     exit;
 }
 
-$type = $_GET['typ'] ?? '';
-$limit = (int)($_GET['limit'] ?? 6);
-if ($limit < 1 || $limit > 50) {
-    $limit = 6;
+$type = is_string($_GET['typ'] ?? null) ? $_GET['typ'] : '';
+$defaultLimit = departure_limit($type);
+$limit = filter_var($_GET['limit'] ?? $defaultLimit, FILTER_VALIDATE_INT, [
+    'options' => ['min_range' => 1, 'max_range' => 50],
+]);
+if ($limit === false) {
+    $limit = $defaultLimit;
 }
 
 $now = (new DateTimeImmutable('now', new DateTimeZone('Europe/Berlin')))->format('Y-m-d H:i:s');

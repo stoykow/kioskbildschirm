@@ -31,6 +31,13 @@ header("Expires: 0");
     <script src="abfall.js?v=<?php echo time(); ?>"></script>
     <script src="sonstige.js?v=<?php echo time(); ?>"></script>
     <script src="aufgaben.js?v=<?php echo time(); ?>"></script>
+    <script>
+        window.kioskDepartureLimits = <?php echo json_encode([
+            'zug' => departure_limit('zug'),
+            'tram' => departure_limit('tram'),
+            'bus' => departure_limit('bus'),
+        ]); ?>;
+    </script>
     <script src="abfahrten.js?v=<?php echo time(); ?>"></script>
     <script src="kiosk.js?v=<?php echo time(); ?>"></script>
     

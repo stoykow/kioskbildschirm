@@ -3,11 +3,25 @@
 
 $showMouse = true;
 
-// Stadtbusanzeige ab Bahnhof Südausgang, Görlitz (DB-Haltestellen-ID).
+// Busanzeige ab Bahnhof Südausgang, Görlitz (DB-Haltestellen-ID).
 $cityBusStopExternalId = '977198';
 // Beide Haltestellenseiten; die API liefert auch benachbarte Haltestellen.
 $cityBusSourceStopIds = ['977198', '743766'];
-$cityBusLines = ['A', 'B', 'C', 'D', 'E', 'F', 'N'];
+$cityBusLines = ['A', 'B', 'C', 'D', 'E', 'F', 'N', '62', '67'];
+
+// Anzahl der nächsten Abfahrten pro Anzeige (1 bis 50).
+// Ersatzverkehr am Hbf verwendet ebenfalls die Einstellung für Züge.
+$departureLimits = [
+    'zug' => 6,
+    'tram' => 2,
+    'bus' => 4,
+];
+
+function departure_limit(string $type): int {
+    global $departureLimits;
+    $key = $type === 'ersatzverkehr' ? 'zug' : $type;
+    return max(1, min(50, (int)($departureLimits[$key] ?? 6)));
+}
 
 function env_value($key, $default = null) {
     $val = getenv($key);

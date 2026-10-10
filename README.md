@@ -110,10 +110,18 @@ Nach dem Umschalten die Kiosk-Seite neu laden.
 Die Busanzeige nutzt Bahnhof Südausgang, Görlitz (DB-ID `977198`).
 Beide Haltestellenseiten (`977198` und `743766`) werden berücksichtigt;
 mitgelieferte Abfahrten anderer Haltestellen werden beim Import verworfen.
-`$cityBusLines` erlaubt nur die GVB-Stadtbuslinien A, B, C, D, E, F und N,
-sofern sie an dieser Haltestelle abfahren. Regionalbusse werden beim Import
-und bei der Ausgabe herausgefiltert. Nach der Umstellung den Abfahrten-Import
+`$cityBusLines` erlaubt die GVB-Stadtbuslinien A, B, C, D, E, F und N sowie
+die Regionalbuslinien 62 und 67, sofern sie an dieser Haltestelle abfahren.
+Andere Linien werden beim Import und bei der Ausgabe herausgefiltert.
+Nach der Umstellung den Abfahrten-Import
 einmal ausführen oder den nächsten automatischen Import abwarten.
+
+Die Anzahl der nächsten Abfahrten lässt sich zentral in `config.php` über
+`$departureLimits` einstellen: `'bus' => 4`, `'zug' => 6`, `'tram' => 2`.
+Zug-Ersatzverkehr am Hbf übernimmt den Wert von `zug`. Gültig sind 1 bis 50
+Einträge. Anzeige und API verwenden diese Werte; ein expliziter `limit`-Parameter
+der API kann sie für einzelne Abfragen überschreiben. Nach einer Änderung
+die Kiosk-Seite neu laden.
 
 Secrets nur per ENV:
 - `OPENWEATHER_API`

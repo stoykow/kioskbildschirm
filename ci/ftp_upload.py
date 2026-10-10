@@ -31,7 +31,7 @@ def read_config(environ):
         "port": int(port_text),
         "user": environ["FTP_USER"],
         "password": environ["FTP_PASS"],
-        "directory": environ.get("FTP_SERVER_DIR", "/"),
+        "directory": environ.get("FTP_SERVER_DIR", "."),
     }
     for value in (config["host"], config["user"], config["password"], config["directory"]):
         if not value or any(ord(char) < 32 or ord(char) == 127 for char in value):
@@ -64,21 +64,26 @@ def deploy(directory, environ, ftp_factory=None):
     if ftp_factory is None:
         ftp_factory = ftplib.FTP
     ftp = None
+    phase = "Verbindung"
     try:
         ftp = ftp_factory(timeout=30)
         ftp.connect(config["host"], config["port"])
+        phase = "Anmeldung"
         ftp.login(config["user"], config["password"])
         ftp.set_pasv(True)
+        phase = "Zielverzeichnis"
         ftp.cwd(config["directory"])
         for item in files:
+            phase = "Datei " + item.name
             temporary_name = "." + item.name + ".upload"
             with item.open("rb") as source:
                 ftp.storbinary("STOR " + temporary_name, source)
             ftp.rename(temporary_name, item.name)
+        phase = "Verbindungsabschluss"
         ftp.quit()
     except Exception:
         # FTP responses and exception messages can contain credentials. Never log them.
-        raise DeployError("FTP-Upload fehlgeschlagen. Zugang, Netzwerk und Zielverzeichnis prüfen.") from None
+        raise DeployError(f"FTP-Upload fehlgeschlagen ({phase}). Zugang, Netzwerk und Zielverzeichnis prüfen.") from None
     finally:
         if ftp is not None:
             try:

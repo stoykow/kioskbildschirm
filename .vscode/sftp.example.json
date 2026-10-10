@@ -5,7 +5,7 @@
   "port": 28832,
   "username": "ftpuser",
   "password": "NICHT_IN_GIT_SPEICHERN",
-  "remotePath": "/",
+  "remotePath": ".",
   "uploadOnSave": true,
   "syncMode": "update",
   "watcher": {

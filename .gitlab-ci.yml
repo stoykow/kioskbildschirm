@@ -17,7 +17,7 @@ default:
 variables:
   HOST: "192.168.112.30"
   FTP_PORT: "28832"
-  FTP_SERVER_DIR: "/"
+  FTP_SERVER_DIR: "."
 
 php-syntax:
   stage: test

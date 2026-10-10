@@ -185,7 +185,7 @@ class FTPUploadTests(unittest.TestCase):
         self.assertEqual(code, 0)
         calls = self.instances[0].calls
         self.assertIn(("connect", "192.168.112.30", 28832), calls)
-        self.assertIn(("cwd", "/"), calls)
+        self.assertIn(("cwd", "."), calls)
 
     def test_failures_stop_deployment_without_secret_output(self):
         for operation in ("connect", "login", "passive", "cwd", "store", "rename", "quit"):

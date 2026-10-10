@@ -154,7 +154,7 @@ Im Projekt unter **Settings → CI/CD → Variables** diese Variablen anlegen:
 | `FTP_PORT` | `28832` | Nein |
 | `FTP_USER` | Bestehender FTP-Benutzer, z. B. `ftpuser` | Nein |
 | `FTP_PASS` | Bestehendes Passwort dieses FTP-Benutzers | Ja |
-| `FTP_SERVER_DIR` | `/` (FTP-Home entspricht dem Webverzeichnis) | Nein |
+| `FTP_SERVER_DIR` | `.` (Login-Verzeichnis, entspricht dem Webverzeichnis) | Nein |
 
 Alle sind vom Typ **Variable**, Environment scope **production** (oder `*`), und
 **Protected**. Für `FTP_PASS` zusätzlich **Masked and hidden** auswählen und
@@ -163,6 +163,8 @@ sein, damit der Deploy die geschützten Variablen erhält. Die drei öffentliche
 Verbindungswerte haben auch Defaults in der YAML; GitLab-Variablen überschreiben
 diese. Pflicht sind insbesondere `FTP_USER` und `FTP_PASS`.
 FTP verbindet sich mit `HOST:28832`; der Live-Test nutzt `http://HOST:28830/`.
+Beim bestehenden FTP-Server liegt das Webverzeichnis unter `/home/FTP_USER`.
+`.` bleibt nach der Anmeldung darin; `/` wäre die Container-Wurzel.
 Optional überschreiben `FTP_SERVER` das FTP-Ziel und `APP_URL` die Testadresse.
 Siehe [GitLab: CI/CD-Variablen](https://docs.gitlab.com/ci/variables/).
 

@@ -150,19 +150,20 @@ Im Projekt unter **Settings → CI/CD → Variables** diese Variablen anlegen:
 
 | Variable | Wert | Geheim |
 | --- | --- | --- |
-| `FTP_SERVER` | `192.168.112.30` | Nein |
+| `HOST` | `192.168.112.30` (ohne `http://` oder Port) | Nein |
 | `FTP_PORT` | `28832` | Nein |
 | `FTP_USER` | Bestehender FTP-Benutzer, z. B. `ftpuser` | Nein |
 | `FTP_PASS` | Bestehendes Passwort dieses FTP-Benutzers | Ja |
 | `FTP_SERVER_DIR` | `/` (FTP-Home entspricht dem Webverzeichnis) | Nein |
-| `APP_URL` | `http://192.168.112.30:28830/` | Nein |
 
-Alle sind vom Typ **Variable**, Environment scope **production**, und
+Alle sind vom Typ **Variable**, Environment scope **production** (oder `*`), und
 **Protected**. Für `FTP_PASS` zusätzlich **Masked and hidden** auswählen und
 **Expand variable reference** ausschalten. `main` muss eine geschützte Branch
-sein, damit der Deploy die geschützten Variablen erhält. Die vier öffentlichen
+sein, damit der Deploy die geschützten Variablen erhält. Die drei öffentlichen
 Verbindungswerte haben auch Defaults in der YAML; GitLab-Variablen überschreiben
 diese. Pflicht sind insbesondere `FTP_USER` und `FTP_PASS`.
+FTP verbindet sich mit `HOST:28832`; der Live-Test nutzt `http://HOST:28830/`.
+Optional überschreiben `FTP_SERVER` das FTP-Ziel und `APP_URL` die Testadresse.
 Siehe [GitLab: CI/CD-Variablen](https://docs.gitlab.com/ci/variables/).
 
 Es wird das vorhandene FTP-Passwort aus der Host-Konfiguration verwendet.
@@ -174,13 +175,14 @@ Die echte `.env` und `.vscode/sftp.json` bleiben aus Git ausgeschlossen.
 
 ### Runner im lokalen Netz
 
-Alle Jobs verwenden den Tag **hausordnung-lan**. Ein passender GitLab Runner
+Alle Jobs verwenden den Tag **gitlab**, passend zum bestehenden Projekt-Runner.
+Ein passender GitLab Runner
 muss `gitlab.stoykow.de`, die Container-Registry und den FTP-/Webserver erreichen
 können. Er braucht den **Docker executor**. Die Jobs brauchen keinen
 privilegierten Modus und keinen Docker-Socket.
 
 Im GitLab-Projekt unter **Settings → CI/CD → Runners** einen Project Runner
-mit Tag `hausordnung-lan` erstellen und **Run untagged jobs** ausschalten.
+mit Tag `gitlab` erstellen und **Run untagged jobs** ausschalten.
 Für Tests auf Feature-Branches und Merge Requests muss er auch ungeschützte
 Branches ausführen dürfen; die Deploy-Variablen bleiben trotzdem geschützt.
 Siehe [GitLab: Runner erstellen](https://docs.gitlab.com/ci/runners/new_creation_workflow/).

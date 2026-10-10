@@ -96,6 +96,18 @@ class FTPUploadTests(unittest.TestCase):
                 self.assertIn("FTP_PORT", error)
                 self.assertEqual(self.instances, [])
 
+    def test_host_variable_replaces_ftp_server(self):
+        environ = {key: value for key, value in self.environ.items() if key != "FTP_SERVER"}
+        environ["HOST"] = "192.168.112.30"
+        code, _, _ = self.run_main(environ=environ)
+        self.assertEqual(code, 0)
+        self.assertIn(("connect", "192.168.112.30", 28832), self.instances[0].calls)
+
+    def test_explicit_ftp_server_overrides_host(self):
+        code, _, _ = self.run_main(environ={**self.environ, "HOST": "192.168.112.99"})
+        self.assertEqual(code, 0)
+        self.assertIn(("connect", self.environ["FTP_SERVER"], 28832), self.instances[0].calls)
+
     def test_missing_artifact_path_fails_before_connect(self):
         code, _, _ = self.run_main(directory=self.root / "missing")
         self.assertEqual(code, 1)

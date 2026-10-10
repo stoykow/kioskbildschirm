@@ -23,6 +23,16 @@ def base_url(value: str) -> str:
     return value.rstrip("/") + "/"
 
 
+def application_url(environ) -> str:
+    value = environ.get("APP_URL")
+    if value:
+        return base_url(value)
+    host = environ.get("HOST") or environ.get("FTP_SERVER")
+    if not host:
+        raise ValueError("HOST oder APP_URL fehlt")
+    return base_url(f"http://{host}:28830/")
+
+
 def read(base: str, path: str, commit: str, timeout: int = 30) -> bytes:
     separator = "&" if "?" in path else "?"
     request = Request(
@@ -92,7 +102,7 @@ def main() -> int:
     parser.add_argument("--refresh-departures", action="store_true")
     options = parser.parse_args()
     try:
-        base = base_url(os.getenv("APP_URL", ""))
+        base = application_url(os.environ)
         commit = os.getenv("CI_COMMIT_SHA", "")
         if not re.fullmatch(r"[0-9a-f]{40,64}", commit):
             raise ValueError("CI_COMMIT_SHA fehlt oder ist ungültig")

@@ -14,8 +14,11 @@ class DeployError(Exception):
 
 
 def read_config(environ):
-    required = ("FTP_SERVER", "FTP_USER", "FTP_PASS")
+    host = environ.get("FTP_SERVER") or environ.get("HOST")
+    required = ("FTP_USER", "FTP_PASS")
     missing = [name for name in required if not environ.get(name)]
+    if not host:
+        missing.insert(0, "HOST oder FTP_SERVER")
     if missing:
         raise DeployError("Fehlende CI-Variablen: " + ", ".join(missing))
 
@@ -24,7 +27,7 @@ def read_config(environ):
         raise DeployError("FTP_PORT muss eine Zahl zwischen 1 und 65535 sein.")
 
     config = {
-        "host": environ["FTP_SERVER"],
+        "host": host,
         "port": int(port_text),
         "user": environ["FTP_USER"],
         "password": environ["FTP_PASS"],

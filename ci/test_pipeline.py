@@ -100,6 +100,12 @@ class LiveVerificationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             verify.base_url("http://user:password@example.test/")
 
+    def test_application_url_uses_host_and_kiosk_port(self):
+        self.assertEqual(verify.application_url({"HOST": "192.168.112.30"}), "http://192.168.112.30:28830/")
+
+    def test_explicit_application_url_overrides_host(self):
+        self.assertEqual(verify.application_url({"HOST": "192.168.112.30", "APP_URL": "https://kiosk.example.test"}), "https://kiosk.example.test/")
+
 
 if __name__ == "__main__":
     unittest.main()

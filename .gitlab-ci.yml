@@ -12,13 +12,12 @@ workflow:
 
 default:
   tags:
-    - hausordnung-lan
+    - gitlab
 
 variables:
-  FTP_SERVER: "192.168.112.30"
+  HOST: "192.168.112.30"
   FTP_PORT: "28832"
   FTP_SERVER_DIR: "/"
-  APP_URL: "http://192.168.112.30:28830/"
 
 php-syntax:
   stage: test
@@ -57,7 +56,7 @@ deploy-production:
   resource_group: hausordnung-production
   environment:
     name: production
-    url: $APP_URL
+    url: "http://${HOST}:28830/"
   rules:
     - if: '$CI_COMMIT_BRANCH == "main" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web")'
   script:

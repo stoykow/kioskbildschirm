@@ -131,16 +131,19 @@ Admin-Seite: `admin.php` (ohne Login)
 
 ## GitLab CI/CD
 
-Das Repository liegt auf GitLab. Die aktive Pipeline ist `.gitlab-ci.yml`;
-GitLab führt die bisherige GitHub-Workflow-Datei nicht aus.
+Das Repository liegt auf GitLab. Paketbau, FTP-Upload und Live-Prüfungen
+stehen direkt als Shell-Befehle in `.gitlab-ci.yml`, wie beim Projekt Barczyk.
+Zusätzliche Python-CI-Skripte oder eine lokale SFTP-Konfiguration werden
+nicht benötigt.
 
-Die Pipeline prüft PHP- und JavaScript-Syntax sowie die Deploy-Werkzeuge.
+Die Pipeline prüft PHP- und JavaScript-Syntax.
 Nach erfolgreichen Tests entsteht ein Webpaket ohne `.env`, SQL, Compose,
 Git-Metadaten oder Zugangsdaten. Ein Push auf `main` lädt dieses Paket per FTP
-hoch. Die Dateien werden einzeln über temporäre Dateien und Rename ersetzt;
+hoch. `lftp` ersetzt die Dateien über temporäre Dateien und Rename;
 der Versionsmarker wird zuletzt veröffentlicht. Deploys laufen nacheinander.
 Danach werden die ausgelieferte Commit-Version, Startseite, statischen Dateien
-und JSON-APIs geprüft sowie die Abfahrten einmal neu importiert. Ein fehlerhafter
+und JSON-APIs mit `curl`, `jq` und SHA-256 geprüft sowie die Abfahrten einmal
+neu importiert. Ein fehlerhafter
 Upload oder Live-Test lässt den Job fehlschlagen. Ein manueller Pipeline-Start
 auf `main` führt ebenfalls den Deploy aus.
 
@@ -173,7 +176,8 @@ Für diesen FTP-Deploy werden keine Datenbankpasswörter oder SSH-Schlüssel
 benötigt. `MARIADB_ROOT_PASSWORD`, `MARIADB_PASSWORD`, `HO_TOKEN` und
 `OPENWEATHER_API` bleiben in der lokalen `docker/.env` auf dem Host.
 Compose und Datenbankstruktur werden über diese Pipeline nicht ausgerollt.
-Die echte `.env` und `.vscode/sftp.json` bleiben aus Git ausgeschlossen.
+Die echte `.env` bleibt aus Git ausgeschlossen. Der alte GitHub-Workflow
+und die SFTP-Beispielkonfiguration sind entfernt; Deploys erfolgen über GitLab.
 
 ### Runner im lokalen Netz
 
@@ -212,10 +216,6 @@ Für FTP müssen vom Runner aus auch die passiven Ports `28833–28842` erreichb
 sein. Nach Anlegen der Variablen und des Runners unter **Build → Pipelines**
 eine neue Pipeline für `main` starten. Ist ein Job `pending`, fehlen in der
 Regel ein verfügbarer Runner oder der passende Tag.
-
-Die Dateien `ci/package.py`, `ci/ftp_upload.py` und `ci/verify.py` übernehmen
-Paketbau, Upload und Live-Prüfung. Die Deploy-Tests lassen sich lokal mit
-`python -m unittest discover -s ci -p 'test_*.py' -v` ausführen.
 
 ## Datenbank - Tabellen (wichtigste)
 Bestehende Kern-Tabellen:

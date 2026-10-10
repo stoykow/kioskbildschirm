@@ -31,17 +31,28 @@ javascript-syntax:
   script:
     - for file in ./*.js; do node --check "$file" || exit 1; done
 
-deployment-tests:
-  stage: test
-  image: python:3.13-alpine
-  script:
-    - python -m unittest discover -s ci -p 'test_*.py' -v
-
 web-package:
   stage: package
-  image: python:3.13-alpine
+  image: alpine:3.23
   script:
-    - python ci/package.py
+    - |
+      set -eu
+      printf '%s' "$CI_COMMIT_SHA" | grep -Eq '^[0-9a-f]{40,64}$'
+      test -f index.php && test -f config.php && test -f .htaccess
+      test ! -e upload/htdocs
+      mkdir -p upload/htdocs
+      for file in ./*.php ./*.js ./*.css ./*.ics ./.htaccess; do
+        test -e "$file" || continue
+        test -f "$file" && test ! -L "$file"
+        cp "$file" upload/htdocs/
+      done
+      cat > upload/htdocs/deployment_version.php <<EOF
+      <?php
+      header('Content-Type: application/json; charset=utf-8');
+      header('Cache-Control: no-store');
+      echo '{"commit":"$CI_COMMIT_SHA"}';
+      EOF
+      echo "Webpaket erstellt: $(find upload/htdocs -type f | wc -l) Dateien"
   artifacts:
     name: "hausordnung-$CI_COMMIT_SHORT_SHA"
     paths:
@@ -50,7 +61,7 @@ web-package:
 
 deploy-production:
   stage: deploy
-  image: python:3.13-alpine
+  image: alpine:3.23
   dependencies:
     - web-package
   resource_group: hausordnung-production
@@ -59,6 +70,108 @@ deploy-production:
     url: "http://${HOST}:28830/"
   rules:
     - if: '$CI_COMMIT_BRANCH == "main" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web")'
+  before_script:
+    - apk add --no-cache lftp curl jq
   script:
-    - python ci/ftp_upload.py upload/htdocs
-    - python ci/verify.py --refresh-departures
+    - |
+      set -eu
+      : "${FTP_USER:?FTP_USER fehlt}"
+      : "${FTP_PASS:?FTP_PASS fehlt}"
+      deploy_host="${FTP_SERVER:-${HOST:-}}"
+      : "${deploy_host:?HOST oder FTP_SERVER fehlt}"
+      FTP_PORT="${FTP_PORT:-28832}"
+      FTP_SERVER_DIR="${FTP_SERVER_DIR:-.}"
+      printf '%s' "$deploy_host" | grep -Eq '^[a-zA-Z0-9._-]+$'
+      printf '%s' "$FTP_PORT" | grep -Eq '^[0-9]{1,5}$'
+      test "$FTP_PORT" -ge 1 && test "$FTP_PORT" -le 65535
+      printf '%s' "$FTP_SERVER_DIR" | grep -Eq '^[a-zA-Z0-9_./-]+$'
+      printf '%s' "$CI_COMMIT_SHA" | grep -Eq '^[0-9a-f]{40,64}$'
+      test -f upload/htdocs/deployment_version.php
+      for file in upload/htdocs/* upload/htdocs/.[!.]* upload/htdocs/..?*; do
+        test -e "$file" || continue
+        test -f "$file" && test ! -L "$file"
+        case "${file##*/}" in
+          .htaccess|*.php|*.js|*.css|*.ics) ;;
+          *) echo 'Unerlaubte Datei im Webpaket' >&2; exit 1 ;;
+        esac
+      done
+      check_dir="$(mktemp -d)"
+      trap 'rm -rf "$check_dir"' EXIT HUP INT TERM
+      # Passwort nur per Umgebung; keine FTP-Antworten mit Zugangsdaten im Log.
+      if ! LFTP_PASSWORD="$FTP_PASS" lftp --norc --user "$FTP_USER" --env-password -p "$FTP_PORT" "ftp://$deploy_host" > "$check_dir/ftp.log" 2>&1 <<EOF
+      set cmd:fail-exit true
+      set cmd:parallel 1
+      set net:timeout 30
+      set net:max-retries 2
+      set net:reconnect-interval-base 5
+      set ftp:passive-mode true
+      set ftp:ssl-allow false
+      set ftp:list-options -a
+      set xfer:use-temp-file true
+      set xfer:temp-file-name .*.upload
+      cd "$FTP_SERVER_DIR"
+      mirror --reverse --transfer-all --overwrite --no-perms --no-recursion --no-symlinks --max-errors=1 --exclude-glob deployment_version.php upload/htdocs/ .
+      put upload/htdocs/deployment_version.php -o deployment_version.php
+      bye
+      EOF
+      then
+        echo 'FTP-Upload fehlgeschlagen. Zugang, Netzwerk und Zielverzeichnis prüfen.' >&2
+        exit 1
+      fi
+      echo "FTP-Upload erfolgreich: $(find upload/htdocs -type f | wc -l) Dateien"
+
+      app_url="${APP_URL:-http://${HOST:-$deploy_host}:28830/}"
+      case "$app_url" in
+        http://*|https://*) ;;
+        *) echo 'APP_URL muss eine HTTP-/HTTPS-Adresse sein' >&2; exit 1 ;;
+      esac
+      case "$app_url" in
+        *\?*|*\#*|*@*) echo 'APP_URL enthält unzulässige URL-Bestandteile' >&2; exit 1 ;;
+      esac
+      app_url="${app_url%/}/"
+      fetch() {
+        status="$(curl --fail --silent --show-error --connect-timeout 10 --max-time 150 \
+          --header 'Cache-Control: no-cache' --user-agent hausordnung-gitlab-ci \
+          --get --data-urlencode "ci_check=$CI_COMMIT_SHA" \
+          --output "$check_dir/response" --write-out '%{http_code}' "$app_url$1")"
+        test "$status" = 200
+      }
+      fetch deployment_version.php
+      jq -e --arg commit "$CI_COMMIT_SHA" 'type == "object" and .commit == $commit' "$check_dir/response" > /dev/null
+      echo 'OK: Deployment-Version'
+      fetch ''
+      for element in weather train tram bus; do
+        grep -q "id=\"$element\"" "$check_dir/response"
+      done
+      echo 'OK: Kiosk-Startseite'
+      for file in upload/htdocs/*.js upload/htdocs/*.css upload/htdocs/*.ics; do
+        test -f "$file" || continue
+        name="${file##*/}"
+        fetch "$name"
+        local_hash="$(sha256sum "$file" | cut -d ' ' -f 1)"
+        live_hash="$(sha256sum "$check_dir/response" | cut -d ' ' -f 1)"
+        test "$local_hash" = "$live_hash"
+        echo "OK: $name"
+      done
+      fetch cron_abfahrten.php
+      test "$(cat "$check_dir/response" | tr -d '\r\n')" = OK
+      echo 'OK: Abfahrten-Import'
+      for endpoint in abfall_api.php termine_sonstige_api.php aufgaben_api.php; do
+        key=events
+        test "$endpoint" != aufgaben_api.php || key=tasks
+        fetch "$endpoint"
+        jq -e --arg key "$key" 'type == "object" and (has("error") | not) and (.[$key] | type == "array")' "$check_dir/response" > /dev/null
+        echo "OK: $endpoint"
+      done
+      for kind in zug ersatzverkehr tram bus; do
+        fetch "abfahrten.php?typ=$kind&limit=6"
+        jq -e --arg kind "$kind" '
+          type == "array" and all(.[];
+            type == "object" and (.anzeige_zeit | type == "string" and length > 0)
+            and (if $kind == "bus" then
+              .produkt == "bus" and (.linie as $line | ["A","B","C","D","E","F","N"] | index($line) != null)
+            else true end))
+        ' "$check_dir/response" > /dev/null
+        echo "OK: Abfahrten $kind ($(jq length "$check_dir/response") Einträge)"
+      done
+      echo 'Deployment und Live-Prüfung erfolgreich'

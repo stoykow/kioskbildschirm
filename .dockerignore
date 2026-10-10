@@ -1,7 +1,5 @@
 .git
-.github
 .gitlab-ci.yml
-ci
 upload
 .env
 .env.*

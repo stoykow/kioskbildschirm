@@ -129,58 +129,89 @@ Admin-Seite: `admin.php` (ohne Login)
 - Sonstige Termine anlegen/bearbeiten/löschen
 - Löschen räumt `termine_sonstige_zuhause` auf
 
-## CI/CD-Beispiel
+## GitLab CI/CD
 
-Die Datei `.github/workflows/test-und-upload.yml` zeigt einen einfachen Ablauf:
+Das Repository liegt auf GitLab. Die aktive Pipeline ist `.gitlab-ci.yml`;
+GitLab führt die bisherige GitHub-Workflow-Datei nicht aus.
 
-- Repository auschecken
-- Docker-Image bauen
-- PHP-Syntax im Container prüfen
-- Projektdateien inklusive DB-Schema als Artifact `hausordnung-kiosk` hochladen
-- bei Push auf `main` nur die Webdateien per FTP nach `htdocs` hochladen
+Die Pipeline prüft PHP- und JavaScript-Syntax sowie die Deploy-Werkzeuge.
+Nach erfolgreichen Tests entsteht ein Webpaket ohne `.env`, SQL, Compose,
+Git-Metadaten oder Zugangsdaten. Ein Push auf `main` lädt dieses Paket per FTP
+hoch. Die Dateien werden einzeln über temporäre Dateien und Rename ersetzt;
+der Versionsmarker wird zuletzt veröffentlicht. Deploys laufen nacheinander.
+Danach werden die ausgelieferte Commit-Version, Startseite, statischen Dateien
+und JSON-APIs geprüft sowie die Abfahrten einmal neu importiert. Ein fehlerhafter
+Upload oder Live-Test lässt den Job fehlschlagen. Ein manueller Pipeline-Start
+auf `main` führt ebenfalls den Deploy aus.
 
-Für GitHub Actions müssen diese Repository-Secrets angelegt werden:
+### Variablen in GitLab anlegen
 
-- `FTP_SERVER`
-- `FTP_PORT`
-- `FTP_USER`
-- `FTP_PASS`
-- `FTP_SERVER_DIR`
+Im Projekt unter **Settings → CI/CD → Variables** diese Variablen anlegen:
 
-`docker/.env.example` zeigt die benötigten Namen. Die echte `.env` bleibt lokal
-auf dem Docker-Host und wird nicht mit Git hochgeladen.
+| Variable | Wert | Geheim |
+| --- | --- | --- |
+| `FTP_SERVER` | `192.168.112.30` | Nein |
+| `FTP_PORT` | `28832` | Nein |
+| `FTP_USER` | Bestehender FTP-Benutzer, z. B. `ftpuser` | Nein |
+| `FTP_PASS` | Bestehendes Passwort dieses FTP-Benutzers | Ja |
+| `FTP_SERVER_DIR` | `/` (FTP-Home entspricht dem Webverzeichnis) | Nein |
+| `APP_URL` | `http://192.168.112.30:28830/` | Nein |
 
-Die bisherige Datei `.vscode/sftp.json` ist lokal und wird ignoriert. Als Muster
-liegt `.vscode/sftp.example.json` ohne echtes Passwort bei. Zugangsdaten gehören
-in GitHub Secrets oder in eine lokale, nicht versionierte Konfiguration.
+Alle sind vom Typ **Variable**, Environment scope **production**, und
+**Protected**. Für `FTP_PASS` zusätzlich **Masked and hidden** auswählen und
+**Expand variable reference** ausschalten. `main` muss eine geschützte Branch
+sein, damit der Deploy die geschützten Variablen erhält. Die vier öffentlichen
+Verbindungswerte haben auch Defaults in der YAML; GitLab-Variablen überschreiben
+diese. Pflicht sind insbesondere `FTP_USER` und `FTP_PASS`.
+Siehe [GitLab: CI/CD-Variablen](https://docs.gitlab.com/ci/variables/).
 
-Hinweis: `192.168.112.30` ist eine private LAN-Adresse. Deshalb läuft der
-Upload-Job im Workflow auf `runs-on: self-hosted`. Dieser Runner muss im gleichen
-Netz wie der Docker-/FTP-Host laufen. Der Test-Job kann weiterhin auf
-`ubuntu-latest` bei GitHub laufen.
+Es wird das vorhandene FTP-Passwort aus der Host-Konfiguration verwendet.
+Für diesen FTP-Deploy werden keine Datenbankpasswörter oder SSH-Schlüssel
+benötigt. `MARIADB_ROOT_PASSWORD`, `MARIADB_PASSWORD`, `HO_TOKEN` und
+`OPENWEATHER_API` bleiben in der lokalen `docker/.env` auf dem Host.
+Compose und Datenbankstruktur werden über diese Pipeline nicht ausgerollt.
+Die echte `.env` und `.vscode/sftp.json` bleiben aus Git ausgeschlossen.
 
-## GitHub-Projekt anlegen
+### Runner im lokalen Netz
 
-Auf diesem Rechner ist die GitHub CLI (`gh`) aktuell nicht installiert. Direktes
-Anlegen aus der Konsole ist deshalb hier nicht möglich. Vorgehen über GitHub:
+Alle Jobs verwenden den Tag **hausordnung-lan**. Ein passender GitLab Runner
+muss `gitlab.stoykow.de`, die Container-Registry und den FTP-/Webserver erreichen
+können. Er braucht den **Docker executor**. Die Jobs brauchen keinen
+privilegierten Modus und keinen Docker-Socket.
 
-1. Neues Repository auf GitHub anlegen, z. B. `hausordnung-kiosk`.
-2. Dieses Projekt als neues Remote hinzufügen:
+Im GitLab-Projekt unter **Settings → CI/CD → Runners** einen Project Runner
+mit Tag `hausordnung-lan` erstellen und **Run untagged jobs** ausschalten.
+Für Tests auf Feature-Branches und Merge Requests muss er auch ungeschützte
+Branches ausführen dürfen; die Deploy-Variablen bleiben trotzdem geschützt.
+Siehe [GitLab: Runner erstellen](https://docs.gitlab.com/ci/runners/new_creation_workflow/).
+
+Falls noch kein Runner installiert ist, kann er auf dem Docker-Host laufen:
 
 ```bash
-git remote add github https://github.com/DEIN-NAME/hausordnung-kiosk.git
-git push -u github main
+docker run -d --name gitlab-runner --restart unless-stopped \
+  -v /srv/docker/gitlab-runner/config:/etc/gitlab-runner \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  gitlab/gitlab-runner:alpine
+
+docker exec -it gitlab-runner gitlab-runner register \
+  --url https://gitlab.stoykow.de \
+  --executor docker \
+  --docker-image php:8.3-cli
 ```
 
-3. In GitHub unter `Settings` -> `Secrets and variables` -> `Actions` die
-Secrets `FTP_SERVER`, `FTP_PORT`, `FTP_USER`, `FTP_PASS` und `FTP_SERVER_DIR`
-anlegen.
+Bei der Registrierung den gerade in GitLab erzeugten `glrt-…`-Token eingeben.
+Dieser Token gehört zur Runner-Einrichtung, nicht in die Projekt-CI-Variablen.
+Der Socket-Mount dient nur dem Runner zum Starten der Job-Container.
+Siehe [GitLab: Runner im Container](https://docs.gitlab.com/runner/install/docker/).
 
-Wenn `gh` später installiert und angemeldet ist:
+Für FTP müssen vom Runner aus auch die passiven Ports `28833–28842` erreichbar
+sein. Nach Anlegen der Variablen und des Runners unter **Build → Pipelines**
+eine neue Pipeline für `main` starten. Ist ein Job `pending`, fehlen in der
+Regel ein verfügbarer Runner oder der passende Tag.
 
-```bash
-gh repo create DEIN-NAME/hausordnung-kiosk --private --source . --remote github --push
-```
+Die Dateien `ci/package.py`, `ci/ftp_upload.py` und `ci/verify.py` übernehmen
+Paketbau, Upload und Live-Prüfung. Die Deploy-Tests lassen sich lokal mit
+`python -m unittest discover -s ci -p 'test_*.py' -v` ausführen.
 
 ## Datenbank - Tabellen (wichtigste)
 Bestehende Kern-Tabellen:

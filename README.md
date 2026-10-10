@@ -79,6 +79,15 @@ gesetzt werden.
 
 ## Abfahrten-Import
 
+Docker Compose startet den Dienst `abfahrten-import`. Er ruft den Import intern
+alle 60 Sekunden auf; die Ausgabe und Fehler stehen in den Container-Logs.
+Die Aktualisierung der Anzeige allein importiert keine neuen Abfahrten.
+Nach einer Änderung der Compose-Datei auf dem Docker-Host erneut ausführen:
+
+```bash
+docker compose -f docker/docker-compose.yml --env-file docker/.env up -d
+```
+
 `cron_abfahrten.php` nutzt jetzt die DB-Schnittstelle
 `int.bahn.de/web/api/reiseloesung/abfahrten`.
 
@@ -93,6 +102,19 @@ Import per Browser ausführen:
 `http://192.168.112.30:28830/cron_abfahrten.php`
 
 ## Konfiguration
+
+In `config.php` schaltet `$showMouse = true` den Mauszeiger ein;
+`$showMouse = false` blendet ihn auch über Schaltflächen aus.
+Nach dem Umschalten die Kiosk-Seite neu laden.
+
+Die Busanzeige nutzt Bahnhof Südausgang, Görlitz (DB-ID `977198`).
+Beide Haltestellenseiten (`977198` und `743766`) werden berücksichtigt;
+mitgelieferte Abfahrten anderer Haltestellen werden beim Import verworfen.
+`$cityBusLines` erlaubt nur die GVB-Stadtbuslinien A, B, C, D, E, F und N,
+sofern sie an dieser Haltestelle abfahren. Regionalbusse werden beim Import
+und bei der Ausgabe herausgefiltert. Nach der Umstellung den Abfahrten-Import
+einmal ausführen oder den nächsten automatischen Import abwarten.
+
 Secrets nur per ENV:
 - `OPENWEATHER_API`
 - `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`

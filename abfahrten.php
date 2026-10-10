@@ -38,8 +38,11 @@ switch ($type) {
         $modeCondition = "l.produkt = 'tram'";
         break;
     case 'bus':
-        $stopExternalId = '977192';
-        $modeCondition = "l.produkt = 'bus'";
+        $stopExternalId = $cityBusStopExternalId;
+        $cityBusLineSql = implode(', ', array_map([$pdo, 'quote'], $cityBusLines));
+        $modeCondition = $cityBusLineSql === ''
+            ? '1=0'
+            : "l.produkt = 'bus' AND l.name IN ({$cityBusLineSql})";
         break;
     case 'ersatzverkehr':
         $stopExternalId = '8010131';

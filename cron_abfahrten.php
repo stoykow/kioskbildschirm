@@ -29,9 +29,11 @@ $stops = [
         'transports' => ['BUS', 'TRAM', 'REGIONAL'],
     ],
     [
-        'external_id' => '977192',
-        'name' => 'Busbahnhof, Görlitz',
+        'external_id' => $cityBusStopExternalId,
+        'name' => 'Bahnhof Südausgang, Görlitz',
         'transports' => ['BUS'],
+        'lines' => $cityBusLines,
+        'source_stop_ids' => $cityBusSourceStopIds,
     ],
 ];
 
@@ -78,7 +80,7 @@ try {
 
         foreach ($departures as $dep) {
             $lineName = $dep['line_name'] ?? '';
-            if ($lineName === '') {
+            if ($lineName === '' || !departure_matches_stop($dep, $stop)) {
                 continue;
             }
 
@@ -126,6 +128,16 @@ try {
     $pdo->rollBack();
     http_response_code(500);
     echo "Error: " . $e->getMessage() . "\n";
+}
+
+function departure_matches_stop(array $departure, array $stop): bool {
+    if (isset($stop['lines']) && !in_array($departure['line_name'], $stop['lines'], true)) {
+        return false;
+    }
+    if (isset($stop['source_stop_ids']) && !in_array($departure['source_stop_id'], $stop['source_stop_ids'], true)) {
+        return false;
+    }
+    return true;
 }
 
 function fetch_departures(string $stopExternalId, array $transports): ?array {
@@ -204,6 +216,7 @@ function normalize_bahn_departure(array $entry): array {
     $when = $entry['ezZeit'] ?? $plannedWhen;
 
     return [
+        'source_stop_id' => (string)($entry['bahnhofsId'] ?? ''),
         'line_name' => $lineName,
         'mode' => $product === 'tram' ? 'tram' : ($product === 'bus' ? 'bus' : 'train'),
         'product' => $product,

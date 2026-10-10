@@ -25,11 +25,15 @@ body {
     font-size: clamp(11px, 1vw + 0.5vh, 20px);
     margin: 0;
     padding: clamp(0.4rem, 0.9vw, 1.1rem) 0;
-    cursor: none;
     font-family: 'Segoe UI', 'Arial', sans-serif;
     overflow-x: hidden;
 }
 
+
+body.hide-mouse,
+body.hide-mouse * {
+    cursor: none !important;
+}
 
 #links,
 #rechts {

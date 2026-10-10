@@ -37,6 +37,20 @@ services:
     ports:
       - "${APP_PORT:-28830}:80"
 
+  abfahrten-import:
+    image: php:8.3-cli
+    restart: unless-stopped
+    depends_on:
+      - app
+    command:
+      - sh
+      - -c
+      - |
+        while true; do
+          php -r 'echo date("c") . " Abfahrten-Import\n"; if (readfile("http://app/cron_abfahrten.php", false, stream_context_create(["http" => ["timeout" => 150]])) === false) { fwrite(STDERR, "Abfahrten-Import fehlgeschlagen\n"); exit(1); }'
+          sleep 60
+        done
+
   phpmyadmin:
     image: phpmyadmin/phpmyadmin:latest
     container_name: hausordnung-phpmyadmin

@@ -93,13 +93,13 @@ async function fetchBus() {
 
         if (!Array.isArray(departures) || departures.length === 0) {
             busDiv.style.display = '';
-            busDiv.textContent = 'Keine Bus-Abfahrten gefunden.';
+            busDiv.textContent = 'Keine Stadtbus-Abfahrten ab Bahnhof Südausgang gefunden.';
             return;
         }
 
         busDiv.style.display = '';
         busDiv.innerHTML = `
-            <div class="train-title">Bus ab Busbahnhof</div>
+            <div class="train-title">Stadtbus ab Bahnhof Südausgang</div>
             ` + departures.slice(0, 6).map(dep => {
             const time = dep.anzeige_zeit || new Date(dep.tatsaechliche_zeit || dep.geplante_zeit).toLocaleTimeString('de-DE', {
                 hour: '2-digit',

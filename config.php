@@ -1,6 +1,14 @@
 <?php
 // app config helper (env for secrets, DB for settings)
 
+$showMouse = true;
+
+// Stadtbusanzeige ab Bahnhof Südausgang, Görlitz (DB-Haltestellen-ID).
+$cityBusStopExternalId = '977198';
+// Beide Haltestellenseiten; die API liefert auch benachbarte Haltestellen.
+$cityBusSourceStopIds = ['977198', '743766'];
+$cityBusLines = ['A', 'B', 'C', 'D', 'E', 'F', 'N'];
+
 function env_value($key, $default = null) {
     $val = getenv($key);
     if ($val === false || $val === '') {

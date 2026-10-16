@@ -201,7 +201,7 @@ Die Berechnung lässt sich ohne Datenbank prüfen:
 php tests/reinigungsplan_test.php
 ```
 
-## CI/CD-Beispiel
+## GitHub CI/CD
 
 Die Datei `.github/workflows/test-und-upload.yml` zeigt einen einfachen Ablauf:
 
@@ -219,7 +219,6 @@ Für GitHub Actions müssen diese Repository-Secrets angelegt werden:
 - `FTP_PORT`
 - `FTP_USER`
 - `FTP_PASS`
-- `FTP_SERVER_DIR`
 
 `docker/.env.example` zeigt die benötigten Namen. Die echte `.env` bleibt lokal
 auf dem Docker-Host und wird nicht mit Git hochgeladen.
@@ -232,6 +231,62 @@ Hinweis: `192.168.112.30` ist eine private LAN-Adresse. Deshalb läuft der
 Upload-Job im Workflow auf `runs-on: self-hosted`. Dieser Runner muss im gleichen
 Netz wie der Docker-/FTP-Host laufen. Der Test-Job kann weiterhin auf
 `ubuntu-latest` bei GitHub laufen.
+
+Beim FTP-Server entspricht das Login-Verzeichnis dem Webverzeichnis
+`/home/ftpuser`. GitHub lädt relativ dazu nach `./` hoch. GitLab verwendet
+`FTP_SERVER_DIR=.`.
+Die Container-Wurzel `/` ist kein Upload-Ziel. In der lokalen
+`.vscode/sftp.json` und ihrer Beispielkonfiguration steht als absoluter
+Zielpfad `/home/ftpuser`. Zugangsdaten bleiben in der ignorierten lokalen Datei.
+Der automatische SFTP-Upload lässt Datenbankdateien, Tests und CI-Konfigurationen
+aus; das vollständige Webpaket besteht aus den Dateien im Projektstamm mit den
+Endungen PHP, JS, CSS und ICS sowie `.htaccess`.
+
+## GitLab CI/CD
+
+Das zweite Remote `origin` verweist auf
+`https://gitlab.stoykow.de/apps/hausordnung.git`. Die Pipeline in
+`.gitlab-ci.yml` prüft PHP, JavaScript und die Reinigungsplan- und Abfahrtstests.
+Anschließend erstellt sie ein Webpaket und ein getrenntes Datenbankpaket.
+Nur das Webpaket wird auf `main` per FTP hochgeladen. Die Datenbankmigrationen
+werden als Artifact bereitgestellt und nicht automatisch auf Produktionsdaten
+angewendet.
+
+Der FTP-Deploy verwendet `lftp`, temporäre Dateien und einen zuletzt geschriebenen
+Versionsmarker. Das `resource_group`-Lock führt GitLab-Deploys nacheinander aus.
+Nach dem Upload prüft die Pipeline die Commit-Version, die Startseite, die
+statischen Dateien, die APIs und den Abfahrtenimport. Die erfolgreiche Antwort
+des neuen Importers kann auch einen bereits aktuellen Cache melden.
+
+Unter **Settings → CI/CD → Variables** werden diese Werte benötigt:
+
+| Variable | Wert | Geheim |
+| --- | --- | --- |
+| `HOST` | `192.168.112.30`, ohne Protokoll oder Port | Nein |
+| `FTP_PORT` | `28832` | Nein |
+| `FTP_USER` | Bestehender FTP-Benutzer, zum Beispiel `ftpuser` | Nein |
+| `FTP_PASS` | Das vorhandene FTP-Passwort | Ja |
+| `FTP_SERVER_DIR` | `.` | Nein |
+
+Die Variablen erhalten den Environment scope `production` oder `*` und werden
+als **Protected** markiert. `main` muss dafür geschützt sein. Für `FTP_PASS`
+zusätzlich **Masked and hidden** wählen und **Expand variable reference**
+deaktivieren. Die öffentlichen Verbindungswerte haben Defaults in der Pipeline.
+`FTP_SERVER` kann den Host und `APP_URL` die Adresse für die Liveprüfung
+überschreiben. Die Datenbankpasswörter und API-Schlüssel bleiben in der lokalen
+`docker/.env` auf dem Docker-Host.
+
+Alle GitLab-Jobs verwenden den Runner-Tag `gitlab` und den Docker executor.
+Der Runner muss GitLab, die Container-Registry sowie FTP und HTTP im lokalen
+Netz erreichen. Für passives FTP müssen auch die Ports 28833 bis 28842 erreichbar
+sein. Jobs benötigen keinen privilegierten Modus oder Docker-Socket.
+Ein Runner, der Tests für Feature-Branches und Merge Requests ausführt, muss
+auch ungeschützte Branches zulassen. Die Deploy-Variablen bleiben geschützt.
+Ein manueller Pipeline-Start auf `main` führt ebenfalls den Deploy aus.
+
+Der zusätzliche Compose-Dienst `abfahrten-import` ruft den gemeinsamen Import
+alle 60 Sekunden auf. Das gleiche Datenbank-Lock und Minutenlimit verhindern
+doppelte Abrufe durch diesen Dienst und die bedarfsgesteuerte Kiosk-Anzeige.
 
 ## GitHub-Projekt anlegen
 

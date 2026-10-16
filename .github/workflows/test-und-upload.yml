@@ -65,4 +65,5 @@ jobs:
           username: ${{ secrets.FTP_USER }}
           password: ${{ secrets.FTP_PASS }}
           local-dir: upload/htdocs/
-          server-dir: ${{ secrets.FTP_SERVER_DIR }}
+          # Relativ zum Login-Verzeichnis /home/ftpuser hochladen.
+          server-dir: ./

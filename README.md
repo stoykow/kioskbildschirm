@@ -3,30 +3,39 @@
 Kurzübersicht für den aktuellen Stand, damit man direkt weiß, wo es weitergeht.
 
 ## Was das System macht
+
 - Kiosk-UI für Umwelt/Status, Abfall, Aufgaben, ÖPNV-Abfahrten
 - Sonstige Termine (z. B. Schornsteinfeger) mit "Zuhause erforderlich"
 - Wetter-Import (OpenWeather) + Forecast-Speicherung
 - Aufgaben/Abfall mit Erledigt-Markierung
+- Reinigungsplan mit wechselnden Bewohnergruppen und frei einstellbarem Rhythmus
 - Admin-Seite zum Bearbeiten von Einstellungen und sonstigen Terminen
 - Geräte-Registrierung (`device_register.php`)
 
 ## Wichtige Dateien
+
 - `index.php` Kiosk-Startseite
 - `kiosk.js` Initialisierung/Intervalle
 - `kiosk.css` Styles
 - `wetter.js` Umwelt/Status (kompakt, Haustür in eigener Zeile)
 - `abfall.js` Abfall + Aufgaben (Abfall nur anzeigen, wenn vorhanden)
 - `aufgaben.js` Aufgaben
+- `reinigungsplan.js` aktuelle Reinigungszuständigkeit und nächster Gruppenwechsel
 - `abfahrten.js` ÖPNV-Anzeige
 - `sonstige.js` Sonstige Termine + Zuhause-Modal
 
 Admin/Config:
+
 - `admin.php` zentrale Admin-Seite (app_config + sonstige Termine)
+- `reinigungsplan_admin.php` Reinigungspläne und Bewohnergruppen verwalten
+- `reinigungsplan.php` gespeicherte Pläne laden und Zeiträume berechnen
 - `config.php` zentrale Config + `db_connect()`
 
 API/Endpoints:
+
 - `abfall_api.php`, `abfall_done.php`, `abfall_users.php`
 - `aufgaben_api.php`, `aufgaben_done.php`
+- `reinigungsplan_api.php` aktive Reinigungspläne mit aktuellen und kommenden Zeiträumen
 - `termine_sonstige_api.php`, `termine_sonstige_zuhause.php`
 - `geraet_status.php`, `ha_ingest.php`
 - `device_register.php`
@@ -68,8 +77,12 @@ cp database/init/001-schema.sql /srv/docker/hausordnung/data/initdb/001-schema.s
 ```
 
 Die SQL-Datei wird nur beim ersten Start einer leeren MariaDB-Datenbank
-automatisch importiert. Bei einer bereits bestehenden Datenbank kann sie über
-phpMyAdmin importiert werden:
+automatisch importiert. Sie enthält bereits die Tabellen für Reinigungspläne.
+
+Bei einer bestehenden Datenbank nur `database/migrations/002-reinigungsplan.sql`
+importieren. Nicht das komplette `schema.sql` oder `database/init/001-schema.sql`
+erneut importieren. Die Migration ergänzt die neuen Tabellen und erhält die
+vorhandenen Bewohnergruppen und Daten. Der Import ist über phpMyAdmin möglich:
 
 `http://192.168.112.30:28831/`
 
@@ -103,9 +116,46 @@ Alles andere per `app_config` (DB):
 - `snow_task_lead_hours`, `snow_task_min_mm`, `snow_task_evening_hour`
 
 Admin-Seite: `admin.php` (ohne Login)
+
 - Einträge in `app_config` anlegen/aktualisieren
 - Sonstige Termine anlegen/bearbeiten/löschen
 - Löschen räumt `termine_sonstige_zuhause` auf
+- Link zur Verwaltung der Reinigungspläne
+
+## Reinigungsrhythmus einrichten
+
+In `admin.php` den Link zum Reinigungsplan öffnen oder direkt
+`reinigungsplan_admin.php` aufrufen.
+
+1. Vorhandene Bewohnergruppen verwenden oder neue Gruppen anlegen, zum Beispiel
+   „Erdgeschoss“ und „Obergeschoss“.
+2. Einen Plan mit Bezeichnung, Startdatum und optionalen Hinweisen anlegen.
+3. Das Intervall zwischen 1 und 365 eingeben und Tage, Wochen oder Monate wählen.
+4. Die Reihenfolge über Positionen festlegen, zum Beispiel 1, 2 und 3. Gruppen mit
+   leerem Positionsfeld nehmen nicht teil. Die erste Gruppe beginnt am Startdatum.
+5. Den Plan speichern. Die Vorschau zeigt den aktuellen und die drei folgenden
+   Zeiträume. Liegt der Start in der Zukunft, zeigt sie die ersten vier Zeiträume.
+
+Bei einem Wochenintervall und Start am Montag wechselt die Zuständigkeit jeden
+Montag. Nach der letzten Gruppe beginnt die Reihenfolge von vorn. Bei
+Monatsintervallen gilt der ursprüngliche Starttag. In kürzeren Monaten wird das
+Monatsende verwendet.
+
+Der Kiosk zeigt automatisch die aktuelle Gruppe, ihren Zeitraum einschließlich
+Enddatum und die nächste Gruppe mit Wechseldatum. Vor dem ersten Zeitraum wird
+das Startdatum angezeigt. Die Anzeige wird alle fünf Minuten aktualisiert.
+
+Pläne können pausiert und wieder aktiviert werden. Während der Pause ist der Plan
+im Kiosk ausgeblendet, der Kalender läuft weiter. Änderungen an Startdatum,
+Intervall oder Gruppenreihenfolge berechnen alle Zuständigkeiten rückwirkend ab
+dem Startdatum neu. Der Reinigungsplan hat keinen Erledigt-Status und benötigt
+keinen Cronjob.
+
+Die Berechnung lässt sich ohne Datenbank prüfen:
+
+```bash
+php tests/reinigungsplan_test.php
+```
 
 ## CI/CD-Beispiel
 
@@ -114,7 +164,8 @@ Die Datei `.github/workflows/test-und-upload.yml` zeigt einen einfachen Ablauf:
 - Repository auschecken
 - Docker-Image bauen
 - PHP-Syntax im Container prüfen
-- Projektdateien inklusive DB-Schema als Artifact `hausordnung-kiosk` hochladen
+- Reinigungsrhythmus mit den CLI-Tests im Container prüfen
+- Projektdateien inklusive DB-Schema und Migration als Artifact `hausordnung-kiosk` hochladen
 - bei Push auf `main` nur die Webdateien per FTP nach `htdocs` hochladen
 
 Für GitHub Actions müssen diese Repository-Secrets angelegt werden:
@@ -162,8 +213,11 @@ gh repo create DEIN-NAME/hausordnung-kiosk --private --source . --remote github 
 
 ## Datenbank - Tabellen (wichtigste)
 Bestehende Kern-Tabellen:
+
 - `benutzer`, `benutzer_gruppen`
 - `aufgaben`, `aufgaben_erledigt`
+- `reinigungsplaene` (Startdatum, Intervall, Einheit und Aktivstatus)
+- `reinigungsplan_gruppen` (Bewohnergruppen je Plan mit ihrer Reihenfolge)
 - `termine_abfall`, `termine_abfall_erledigt`
 - `termine_sonstige` (mit `requires_home`)
 - `termine_sonstige_zuhause` (wer ist zuhause)
@@ -178,10 +232,12 @@ Bestehende Kern-Tabellen:
 Hinweis: Tabelle `wetter_daten` wurde zu `wetter_weather` umbenannt.
 
 ## UI-Logik (kurz)
+
 - Abfall und Sonstige werden nur angezeigt, wenn Termine vorhanden sind.
 - Schadstoffmobil ist nicht klickbar und zeigt keinen Unerledigt-Status.
 - Sonstige Termine: Status "Keiner zuhause" nur wenn `requires_home=1` und keine Auswahl.
 - Haustür-Status farbig: aufgeschlossen rot, zugeschlossen grün.
+- Reinigungspläne erscheinen unter dem Wetter. Ohne aktive Pläne bleibt der Bereich ausgeblendet.
 
 ## Device-Registrierung
 - `device_register.php` nimmt `device_name`, erzeugt `device_id`, speichert in `geraete_registrierungen`.

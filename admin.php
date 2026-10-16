@@ -139,6 +139,7 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 </head>
 <body>
     <h1>Admin</h1>
+    <p><a href="reinigungsplan_admin.php">Reinigungsrhythmus und Bewohnergruppen verwalten</a></p>
     <p class="note">Ohne Login. Änderungen wirken sofort. Secrets wie <strong>OPENWEATHER_API</strong> bleiben in der ENV.</p>
 
     <h2>Einstellungen (app_config)</h2>

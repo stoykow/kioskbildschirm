@@ -35,6 +35,8 @@ try {
             'title' => $plan['titel'],
             'details' => $plan['details'],
             'start_date' => $plan['startdatum'],
+            'end_date' => $plan['enddatum'],
+            'ended' => $plan['beendet'],
             'interval' => $plan['intervall'],
             'unit' => $plan['einheit'],
             'active' => $plan['aktiv'] === 1,
@@ -47,7 +49,7 @@ try {
     if (reinigungsplan_schema_missing($error)) {
         http_response_code(503);
         $response = [
-            'error' => 'Die Datenbank für Reinigungspläne ist noch nicht eingerichtet. Bitte die Datenbankmigration ausführen.',
+            'error' => 'Die Datenbank für Reinigungspläne ist noch nicht eingerichtet. Bitte die Datenbankmigrationen ausführen.',
             'code' => 'schema_missing',
         ];
     } else {

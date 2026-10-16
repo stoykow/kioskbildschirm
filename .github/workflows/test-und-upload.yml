@@ -22,6 +22,9 @@ jobs:
       - name: Reinigungsrhythmus im Container prüfen
         run: docker run --rm hausordnung-kiosk php /var/www/html/tests/reinigungsplan_test.php
 
+      - name: Abfahrtsdaten und Haltestellenfilter prüfen
+        run: docker run --rm hausordnung-kiosk php /var/www/html/tests/abfahrten_test.php
+
       - name: Upload-Paket vorbereiten
         run: |
           mkdir -p upload/htdocs upload/database/init upload/database/migrations
@@ -30,6 +33,7 @@ jobs:
           cp schema.sql upload/database/
           cp database/init/001-schema.sql upload/database/init/
           cp database/migrations/002-reinigungsplan.sql upload/database/migrations/
+          cp database/migrations/003-reinigungsplan-ende.sql upload/database/migrations/
           mkdir -p upload/docker
           cp docker/docker-compose.yml docker/.env.example upload/docker/
           cp README.md upload/

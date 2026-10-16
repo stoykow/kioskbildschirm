@@ -32,7 +32,7 @@ function reinigungsplan_admin_date(string $date): string {
 $today = new DateTimeImmutable('today', new DateTimeZone('Europe/Berlin'));
 $form = [
     'id' => 0, 'titel' => 'Hausordnung', 'details' => '',
-    'startdatum' => $today->format('Y-m-d'), 'intervall' => '1',
+    'startdatum' => $today->format('Y-m-d'), 'enddatum' => '', 'intervall' => '1',
     'einheit' => 'wochen', 'aktiv' => 1, 'reihenfolge' => [],
 ];
 $error = '';
@@ -49,7 +49,7 @@ try {
     $plans = reinigungsplan_load($pdo, false);
     $loaded = true;
 } catch (PDOException $e) {
-    $schemaMissing = ($e->errorInfo[1] ?? null) === 1146;
+    $schemaMissing = reinigungsplan_schema_missing($e);
     $error = $schemaMissing
         ? 'Die Datenbank für die Reinigungspläne muss noch eingerichtet werden.'
         : 'Die Reinigungspläne konnten nicht geladen werden.';
@@ -96,6 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
                 'titel' => is_string($_POST['titel'] ?? null) ? trim($_POST['titel']) : '',
                 'details' => is_string($_POST['details'] ?? null) ? trim($_POST['details']) : '',
                 'startdatum' => is_string($_POST['startdatum'] ?? null) ? $_POST['startdatum'] : '',
+                'enddatum' => is_string($_POST['enddatum'] ?? '') ? ($_POST['enddatum'] ?? '') : '',
                 'intervall' => is_string($_POST['intervall'] ?? null) ? $_POST['intervall'] : '',
                 'einheit' => is_string($_POST['einheit'] ?? null) ? $_POST['einheit'] : '',
                 'aktiv' => !empty($_POST['aktiv']) ? 1 : 0,
@@ -111,6 +112,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
                 throw new InvalidArgumentException('Der Hinweis ist zu lang. Bitte kürze ihn.');
             }
             reinigungsplan_parse_date($form['startdatum']);
+            if (isset($_POST['enddatum']) && !is_string($_POST['enddatum'])) {
+                throw new InvalidArgumentException('Bitte ein gültiges Enddatum eingeben.');
+            }
+            if ($form['enddatum'] !== '') {
+                reinigungsplan_parse_date($form['enddatum']);
+                if ($form['enddatum'] < $form['startdatum']) {
+                    throw new InvalidArgumentException('Das Enddatum darf nicht vor dem Startdatum liegen.');
+                }
+            }
             $interval = filter_var($form['intervall'], FILTER_VALIDATE_INT, [
                 'options' => ['min_range' => 1, 'max_range' => 365],
             ]);
@@ -159,18 +169,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
                 }
                 $stmt = $pdo->prepare(
                     'UPDATE reinigungsplaene SET titel = :titel, details = :details,
-                     startdatum = :startdatum, intervall = :intervall, einheit = :einheit,
+                     startdatum = :startdatum, enddatum = :enddatum, intervall = :intervall, einheit = :einheit,
                      aktiv = :aktiv WHERE id = :id'
                 );
             } else {
                 $stmt = $pdo->prepare(
-                    'INSERT INTO reinigungsplaene (titel, details, startdatum, intervall, einheit, aktiv)
-                     VALUES (:titel, :details, :startdatum, :intervall, :einheit, :aktiv)'
+                    'INSERT INTO reinigungsplaene (titel, details, startdatum, enddatum, intervall, einheit, aktiv)
+                     VALUES (:titel, :details, :startdatum, :enddatum, :intervall, :einheit, :aktiv)'
                 );
             }
             $params = [
                 ':titel' => $form['titel'], ':details' => $form['details'] !== '' ? $form['details'] : null,
                 ':startdatum' => $form['startdatum'], ':intervall' => $interval,
+                ':enddatum' => $form['enddatum'] !== '' ? $form['enddatum'] : null,
                 ':einheit' => $form['einheit'], ':aktiv' => $form['aktiv'],
             ];
             if ($form['id'] > 0) {
@@ -257,7 +268,7 @@ $unitLabels = ['tage' => 'Tage', 'wochen' => 'Wochen', 'monate' => 'Monate'];
         <p class="message error" role="alert"><?php echo reinigungsplan_admin_h($error); ?></p>
     <?php endif; ?>
     <?php if ($schemaMissing): ?>
-        <p>Importiere einmalig <code>database/migrations/002-reinigungsplan.sql</code> über phpMyAdmin in die vorhandene Datenbank. Lade anschließend diese Seite neu.</p>
+        <p>Importiere die Datenbankmigrationen <code>database/migrations/002-reinigungsplan.sql</code> und anschließend <code>database/migrations/003-reinigungsplan-ende.sql</code> über phpMyAdmin. Bereits ausgeführte Migrationen können übersprungen werden. Lade anschließend diese Seite neu.</p>
     <?php endif; ?>
     <?php if ($loaded): ?>
     <h2>Bewohnergruppen</h2>
@@ -282,14 +293,16 @@ $unitLabels = ['tage' => 'Tage', 'wochen' => 'Wochen', 'monate' => 'Monate'];
             <div class="row">
                 <div class="field"><label for="titel">Bezeichnung</label><input type="text" name="titel" id="titel" maxlength="255" required value="<?php echo reinigungsplan_admin_h($form['titel']); ?>"></div>
                 <div class="field"><label for="startdatum">Start der ersten Gruppe</label><input type="date" name="startdatum" id="startdatum" required value="<?php echo reinigungsplan_admin_h($form['startdatum']); ?>"></div>
+                <div class="field"><label for="enddatum">Enddatum (optional, einschließlich)</label><input type="date" name="enddatum" id="enddatum" aria-describedby="enddatum-hinweis" value="<?php echo reinigungsplan_admin_h($form['enddatum']); ?>"></div>
             </div>
+            <p class="note" id="enddatum-hinweis">Ohne Enddatum läuft der Rhythmus unbegrenzt. Mit Enddatum endet der Plan an diesem Tag. Danach ist noch keine weitere Reinigung festgelegt.</p>
             <div class="row">
                 <div class="field"><label for="intervall">Wechsel alle</label><input type="number" name="intervall" id="intervall" min="1" max="365" required value="<?php echo reinigungsplan_admin_h($form['intervall']); ?>"></div>
                 <div class="field"><label for="einheit">Einheit</label><select name="einheit" id="einheit"><?php foreach ($unitLabels as $value => $label): ?><option value="<?php echo $value; ?>"<?php echo $form['einheit'] === $value ? ' selected' : ''; ?>><?php echo $label; ?></option><?php endforeach; ?></select></div>
             </div>
             <label for="details">Was wird gereinigt? (optional)</label>
             <textarea name="details" id="details" rows="2"><?php echo reinigungsplan_admin_h($form['details']); ?></textarea>
-            <p class="note">Beispiel: Bei „1 Woche“ und Start am Montag ist jede Gruppe von Montag bis Sonntag zuständig. Nach der letzten Gruppe beginnt die Reihenfolge wieder von vorn. Monatsintervalle orientieren sich am Starttag, bei kürzeren Monaten am Monatsende.</p>
+            <p class="note">Beispiel: Bei „1 Woche“ und Start am Montag ist jede Gruppe von Montag bis Sonntag zuständig. Nach der letzten Gruppe beginnt die Reihenfolge wieder von vorn, solange das Enddatum noch nicht erreicht ist. Monatsintervalle orientieren sich am Starttag, bei kürzeren Monaten am Monatsende.</p>
             <h3>Reihenfolge</h3>
             <p class="note">Trage die Positionen 1, 2, 3 und so weiter ein. Ein leeres Feld bedeutet, dass die Gruppe nicht teilnimmt. Die erste Gruppe beginnt am Startdatum.</p>
             <?php if (array_filter($groups, fn($group) => !(int)$group['aktiv'])): ?><p class="note">Bereits zugeordnete inaktive Gruppen behalten ihre Position. Neue Zuordnungen sind nur für aktive Gruppen möglich.</p><?php endif; ?>
@@ -303,7 +316,7 @@ $unitLabels = ['tage' => 'Tage', 'wochen' => 'Wochen', 'monate' => 'Monate'];
                 </tbody></table>
             <?php endif; ?>
             <label class="checkbox"><input type="checkbox" name="aktiv" value="1"<?php echo $form['aktiv'] ? ' checked' : ''; ?>> Im Kiosk anzeigen</label>
-            <p class="note">Änderungen an Startdatum, Intervall oder Reihenfolge berechnen die Zuständigkeiten ab dem Startdatum neu. Beim Pausieren läuft der Kalender weiter.</p>
+            <p class="note">Änderungen an Startdatum, Enddatum, Intervall oder Reihenfolge berechnen die Zuständigkeiten ab dem Startdatum neu. Beim Pausieren läuft der Kalender weiter.</p>
             <div class="actions"><button class="primary" type="submit"<?php echo !$groups ? ' disabled' : ''; ?>>Rhythmus speichern</button><?php if ($form['id'] > 0): ?><a href="reinigungsplan_admin.php">Neuen Plan anlegen</a><?php endif; ?></div>
         </form>
     </div>
@@ -314,13 +327,18 @@ $unitLabels = ['tage' => 'Tage', 'wochen' => 'Wochen', 'monate' => 'Monate'];
         <section class="section"<?php echo !(int)$plan['aktiv'] ? ' aria-label="Pausierter Plan"' : ''; ?>>
             <h3><?php echo reinigungsplan_admin_h($plan['titel']); ?><?php echo !(int)$plan['aktiv'] ? ' (pausiert)' : ''; ?></h3>
             <p>Wechsel alle <?php echo (int)$plan['intervall']; ?> <?php echo $unitLabels[$plan['einheit']]; ?>, Start am <?php echo reinigungsplan_admin_date($plan['startdatum']); ?>.</p>
+            <?php if ($plan['enddatum'] !== null): ?><p>Geplant bis einschließlich <?php echo reinigungsplan_admin_date($plan['enddatum']); ?>. Danach ist noch keine weitere Reinigung festgelegt.</p><?php endif; ?>
             <?php if ($plan['details']): ?><p><?php echo nl2br(reinigungsplan_admin_h($plan['details'])); ?></p><?php endif; ?>
             <p class="note">Reihenfolge: <?php echo reinigungsplan_admin_h(implode(' → ', array_map(fn($group) => $group['name'] . (!(int)$group['aktiv'] ? ' (inaktiv)' : ''), $plan['gruppen']))); ?></p>
+            <?php if ($plan['beendet']): ?>
+                <p class="note">Der Plan ist beendet. Noch kein weiterer Reinigungsplan festgelegt.</p>
+            <?php else: ?>
             <div class="table-scroll"><table><thead><tr><th>Von</th><th>Bis einschließlich</th><th>Zuständige Gruppe</th></tr></thead><tbody>
             <?php foreach ($plan['perioden'] as $period): ?>
                 <tr><td><?php echo reinigungsplan_admin_date($period['von']); ?><?php echo $period['aktuell'] ? ' (aktuell)' : ''; ?></td><td><?php echo reinigungsplan_admin_date($period['bis']); ?></td><td><?php echo reinigungsplan_admin_h($period['gruppe_name']); ?></td></tr>
             <?php endforeach; ?>
             </tbody></table></div>
+            <?php endif; ?>
             <div class="actions">
                 <a href="reinigungsplan_admin.php?edit_plan=<?php echo (int)$plan['id']; ?>">Bearbeiten</a>
                 <form method="post" action="reinigungsplan_admin.php">

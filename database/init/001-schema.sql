@@ -640,6 +640,7 @@ CREATE TABLE IF NOT EXISTS `reinigungsplaene` (
   `titel` varchar(255) NOT NULL,
   `details` text DEFAULT NULL,
   `startdatum` date NOT NULL,
+  `enddatum` date DEFAULT NULL,
   `intervall` int(10) unsigned NOT NULL,
   `einheit` varchar(16) NOT NULL,
   `aktiv` tinyint(1) NOT NULL DEFAULT 1,

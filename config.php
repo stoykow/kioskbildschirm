@@ -1,6 +1,22 @@
 <?php
 // app config helper (env for secrets, DB for settings)
 
+$showMouse = true;
+
+// Busanzeige ab Bahnhof Südausgang, Görlitz.
+$cityBusStopExternalId = '977198';
+$cityBusSourceStopIds = ['977198', '743766'];
+$cityBusLines = ['A', 'B', 'C', 'D', 'E', 'F', 'N', '62', '67'];
+
+// Anzahl der nächsten Abfahrten pro Anzeige (1 bis 50).
+$departureLimits = ['zug' => 6, 'tram' => 2, 'bus' => 4];
+
+function departure_limit(string $type): int {
+    global $departureLimits;
+    $key = $type === 'ersatzverkehr' ? 'zug' : $type;
+    return max(1, min(50, (int)($departureLimits[$key] ?? 6)));
+}
+
 function env_value($key, $default = null) {
     $val = getenv($key);
     if ($val === false || $val === '') {

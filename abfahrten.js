@@ -1,18 +1,35 @@
 // abfahrten.js
 // Zug/Tram/Bus Abfahrten laden
 
+const departureLimits = window.kioskDepartureLimits || { zug: 6, tram: 2, bus: 4 };
+
+async function fetchDepartureBoard(type, limit) {
+    for (let attempt = 0; attempt < 5; attempt++) {
+        const response = await fetch(`abfahrten.php?typ=${type}&limit=${limit}`, { cache: 'no-store' });
+        const departures = await response.json();
+        if (!response.ok || !Array.isArray(departures)) {
+            throw new Error('Departure board unavailable');
+        }
+        // Beim ersten Import warten parallele Anzeigen kurz auf denselben Cache.
+        if (departures.length === 0 && response.headers.get('X-Abfahrten-Refresh') === 'busy' && attempt < 4) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            continue;
+        }
+        return departures;
+    }
+}
+
 async function fetchTrains() {
     const trainDiv = document.getElementById('train');
     trainDiv.dataset.usesReplacementBus = '0';
     trainDiv.textContent = 'Lädt Zugdaten...';
+    const limit = departureLimits.zug;
     try {
-        const response = await fetch('abfahrten.php?typ=zug&limit=6');
-        let trainOnly = await response.json();
+        let trainOnly = await fetchDepartureBoard('zug', limit);
         let usesReplacementBus = false;
 
         if (!Array.isArray(trainOnly) || trainOnly.length === 0) {
-            const fallbackResponse = await fetch('abfahrten.php?typ=ersatzverkehr&limit=6');
-            trainOnly = await fallbackResponse.json();
+            trainOnly = await fetchDepartureBoard('ersatzverkehr', limit);
             usesReplacementBus = true;
         }
 
@@ -28,7 +45,7 @@ async function fetchTrains() {
 
         trainDiv.innerHTML = `
             <div class="train-title">${title}</div>
-            ` + trainsWithDirection.slice(0, 6).map(dep => {
+            ` + trainsWithDirection.slice(0, limit).map(dep => {
             const time = dep.anzeige_zeit || new Date(dep.tatsaechliche_zeit || dep.geplante_zeit).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
             const line = dep.linie || '';
             const direction = dep.richtung || '';
@@ -51,9 +68,9 @@ async function fetchTrains() {
 async function fetchTrams() {
     const tramDiv = document.getElementById('tram');
     tramDiv.textContent = 'Lädt Straßenbahn-Abfahrten...';
+    const limit = departureLimits.tram;
     try {
-        const response = await fetch('abfahrten.php?typ=tram&limit=2');
-        const departures = await response.json();
+        const departures = await fetchDepartureBoard('tram', limit);
 
         if (!Array.isArray(departures) || departures.length === 0) {
             tramDiv.textContent = 'Keine Straßenbahn-Abfahrten gefunden.';
@@ -62,7 +79,7 @@ async function fetchTrams() {
 
         tramDiv.innerHTML = `
             <div class="train-title">Tram ab Lutherstraße</div>
-            ` + departures.slice(0, 2).map(dep => {
+            ` + departures.slice(0, limit).map(dep => {
             const time = dep.anzeige_zeit || new Date(dep.tatsaechliche_zeit || dep.geplante_zeit).toLocaleTimeString('de-DE', {
                 hour: '2-digit',
                 minute: '2-digit'
@@ -87,20 +104,20 @@ async function fetchTrams() {
 async function fetchBus() {
     const busDiv = document.getElementById('bus');
     busDiv.textContent = 'Lädt Bus-Abfahrten...';
+    const limit = departureLimits.bus;
     try {
-        const response = await fetch('abfahrten.php?typ=bus&limit=6');
-        const departures = await response.json();
+        const departures = await fetchDepartureBoard('bus', limit);
 
         if (!Array.isArray(departures) || departures.length === 0) {
             busDiv.style.display = '';
-            busDiv.textContent = 'Keine Bus-Abfahrten gefunden.';
+            busDiv.textContent = 'Keine Bus-Abfahrten ab Bahnhof Südausgang gefunden.';
             return;
         }
 
         busDiv.style.display = '';
         busDiv.innerHTML = `
-            <div class="train-title">Bus ab Busbahnhof</div>
-            ` + departures.slice(0, 6).map(dep => {
+            <div class="train-title">Bus ab Bahnhof Südausgang</div>
+            ` + departures.slice(0, limit).map(dep => {
             const time = dep.anzeige_zeit || new Date(dep.tatsaechliche_zeit || dep.geplante_zeit).toLocaleTimeString('de-DE', {
                 hour: '2-digit',
                 minute: '2-digit'

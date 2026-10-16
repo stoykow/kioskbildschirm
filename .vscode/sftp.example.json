@@ -5,7 +5,7 @@
   "port": 28832,
   "username": "ftpuser",
   "password": "NICHT_IN_GIT_SPEICHERN",
-  "remotePath": "/",
+  "remotePath": "/home/ftpuser",
   "uploadOnSave": true,
   "syncMode": "update",
   "watcher": {
@@ -16,9 +16,20 @@
   "ignore": [
     ".vscode",
     ".git",
+    ".github",
+    ".gitlab-ci.yml",
     ".gitignore",
+    ".dockerignore",
+    ".env",
+    ".env.*",
     "README.md",
+    "schema.sql",
+    "database",
+    "docker",
+    "tests",
+    "upload",
     "node_modules",
+    "vendor",
     "*.log"
   ]
 }

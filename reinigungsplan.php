@@ -6,7 +6,7 @@ function reinigungsplan_parse_date(string $value): DateTimeImmutable {
         throw new InvalidArgumentException('Bitte ein gültiges Datum im Format JJJJ-MM-TT eingeben.');
     }
     if ((int)substr($value, 0, 4) < 1000) {
-        throw new InvalidArgumentException('Das Startdatum muss zwischen den Jahren 1000 und 9999 liegen.');
+        throw new InvalidArgumentException('Das Datum muss zwischen den Jahren 1000 und 9999 liegen.');
     }
     $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value, new DateTimeZone('Europe/Berlin'));
     $errors = DateTimeImmutable::getLastErrors();
@@ -20,7 +20,7 @@ function reinigungsplan_parse_date(string $value): DateTimeImmutable {
  * Jeder Monatsbeginn wird vom ursprünglichen Anker berechnet. Dadurch wird aus
  * 31. Januar, 28. Februar und 31. März keine dauerhaft auf den 28. verkürzte Folge.
  */
-function reinigungsplan_period_start(DateTimeImmutable $anchor, int $interval, string $unit, int $index): DateTimeImmutable {
+function reinigungsplan_period_start(DateTimeImmutable $anchor, int $interval, string $unit, int $index, ?DateTimeImmutable $latestStart = null): DateTimeImmutable {
     if ($index < 0 || $interval < 1 || $index > intdiv(PHP_INT_MAX, $interval)) {
         throw new InvalidArgumentException('Der Reinigungsrhythmus ist ungültig.');
     }
@@ -33,12 +33,16 @@ function reinigungsplan_period_start(DateTimeImmutable $anchor, int $interval, s
         $monthIndex += $offset;
         $year = intdiv($monthIndex, 12);
         if ($year > 9999) {
+            if ($latestStart !== null) {
+                return $latestStart;
+            }
             throw new InvalidArgumentException('Die Vorschau des Reinigungsrhythmus überschreitet das Jahr 9999. Bitte wähle ein früheres Startdatum oder ein kürzeres Intervall.');
         }
         $month = ($monthIndex % 12) + 1;
         $first = $anchor->setDate($year, $month, 1);
         $day = min((int)$anchor->format('j'), (int)$first->format('t'));
-        return $first->setDate($year, $month, $day);
+        $start = $first->setDate($year, $month, $day);
+        return $latestStart !== null && $start > $latestStart ? $latestStart : $start;
     }
     if ($unit === 'wochen') {
         if ($offset > intdiv(PHP_INT_MAX, 7)) {
@@ -49,6 +53,9 @@ function reinigungsplan_period_start(DateTimeImmutable $anchor, int $interval, s
         throw new InvalidArgumentException('Bitte Tage, Wochen oder Monate als Rhythmus wählen.');
     }
     $start = $anchor->modify('+' . $offset . ' days');
+    if ($latestStart !== null && $start >= $latestStart) {
+        return $latestStart;
+    }
     if ((int)$start->format('Y') > 9999) {
         throw new InvalidArgumentException('Die Vorschau des Reinigungsrhythmus überschreitet das Jahr 9999. Bitte wähle ein früheres Startdatum oder ein kürzeres Intervall.');
     }
@@ -56,13 +63,26 @@ function reinigungsplan_period_start(DateTimeImmutable $anchor, int $interval, s
 }
 
 /**
- * Planfelder: startdatum, intervall, einheit. Gruppen: id, name, in Reihenfolge.
+ * Planfelder: startdatum, optionales enddatum, intervall, einheit.
+ * Gruppen: id, name, in Reihenfolge.
  * Ergebnis: von und bis inklusive, gruppe_id, gruppe_name, aktuell, status.
  * Vor dem Start erscheinen die ersten Zeiträume, danach der aktuelle und die
- * folgenden. Inaktive Gruppen bleiben zugeordnet, bis der Plan geändert wird.
+ * folgenden. Das Enddatum gilt einschließlich und kürzt den letzten Zeitraum.
+ * Nach dem Ende werden keine weiteren Zeiträume oder Wiederholungen geliefert.
+ * Inaktive Gruppen bleiben zugeordnet, bis der Plan geändert wird.
  */
 function reinigungsplan_periods(array $plan, array $orderedGroups, ?DateTimeImmutable $today = null, int $limit = 4): array {
     $anchor = reinigungsplan_parse_date((string)($plan['startdatum'] ?? ''));
+    $endValue = $plan['enddatum'] ?? null;
+    if ($endValue !== null && !is_string($endValue)) {
+        throw new InvalidArgumentException('Bitte ein gültiges Enddatum eingeben.');
+    }
+    $end = $endValue === null || $endValue === '' ? null : reinigungsplan_parse_date($endValue);
+    if ($end !== null && $end < $anchor) {
+        throw new InvalidArgumentException('Das Enddatum darf nicht vor dem Startdatum liegen.');
+    }
+    // Die exklusive Grenze erlaubt auch einen letzten Tag am 31.12.9999.
+    $exclusiveEnd = $end !== null ? $end->modify('+1 day') : null;
     $interval = filter_var($plan['intervall'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 365]]);
     $unit = (string)($plan['einheit'] ?? '');
     if ($interval === false || !in_array($unit, ['tage', 'wochen', 'monate'], true)) {
@@ -85,6 +105,9 @@ function reinigungsplan_periods(array $plan, array $orderedGroups, ?DateTimeImmu
     }
     $timezone = new DateTimeZone('Europe/Berlin');
     $today = ($today ?? new DateTimeImmutable('today', $timezone))->setTimezone($timezone)->setTime(0, 0);
+    if ($end !== null && $today > $end) {
+        return [];
+    }
     $index = 0;
     if ($today >= $anchor) {
         if ($unit === 'monate') {
@@ -95,17 +118,20 @@ function reinigungsplan_periods(array $plan, array $orderedGroups, ?DateTimeImmu
             $elapsedDays = (int)$anchor->diff($today)->format('%a');
             $index = $unit === 'wochen' ? intdiv(intdiv($elapsedDays, 7), $interval) : intdiv($elapsedDays, $interval);
         }
-        while ($index > 0 && reinigungsplan_period_start($anchor, $interval, $unit, $index) > $today) {
+        while ($index > 0 && reinigungsplan_period_start($anchor, $interval, $unit, $index, $exclusiveEnd) > $today) {
             $index--;
         }
-        while (reinigungsplan_period_start($anchor, $interval, $unit, $index + 1) <= $today) {
+        while (reinigungsplan_period_start($anchor, $interval, $unit, $index + 1, $exclusiveEnd) <= $today) {
             $index++;
         }
     }
     $periods = [];
     for ($count = 0; $count < $limit; $count++, $index++) {
-        $start = reinigungsplan_period_start($anchor, $interval, $unit, $index);
-        $next = reinigungsplan_period_start($anchor, $interval, $unit, $index + 1);
+        $start = reinigungsplan_period_start($anchor, $interval, $unit, $index, $exclusiveEnd);
+        if ($end !== null && $start > $end) {
+            break;
+        }
+        $next = reinigungsplan_period_start($anchor, $interval, $unit, $index + 1, $exclusiveEnd);
         $group = $groups[$index % count($groups)];
         $current = $start <= $today && $today < $next;
         $periods[] = [
@@ -123,7 +149,7 @@ function reinigungsplan_periods(array $plan, array $orderedGroups, ?DateTimeImmu
 /** Pläne mit DB-Feldnamen sowie gruppen und berechneten perioden laden. */
 function reinigungsplan_load(PDO $pdo, bool $onlyActive = true): array {
     $plans = $pdo->query(
-        'SELECT id, titel, details, startdatum, intervall, einheit, aktiv, erstellt_am, aktualisiert_am
+        'SELECT id, titel, details, startdatum, enddatum, intervall, einheit, aktiv, erstellt_am, aktualisiert_am
          FROM reinigungsplaene' . ($onlyActive ? ' WHERE aktiv = 1' : '') . ' ORDER BY titel ASC, id ASC'
     )->fetchAll(PDO::FETCH_ASSOC);
     $groupRows = $pdo->query(
@@ -141,12 +167,14 @@ function reinigungsplan_load(PDO $pdo, bool $onlyActive = true): array {
             'position' => (int)$group['position'],
         ];
     }
+    $today = new DateTimeImmutable('today', new DateTimeZone('Europe/Berlin'));
     foreach ($plans as &$plan) {
         $plan['id'] = (int)$plan['id'];
         $plan['intervall'] = (int)$plan['intervall'];
         $plan['aktiv'] = (int)$plan['aktiv'];
         $plan['gruppen'] = $groupsByPlan[$plan['id']] ?? [];
-        $plan['perioden'] = reinigungsplan_periods($plan, $plan['gruppen']);
+        $plan['perioden'] = reinigungsplan_periods($plan, $plan['gruppen'], $today);
+        $plan['beendet'] = $plan['enddatum'] !== null && $plan['enddatum'] < $today->format('Y-m-d');
     }
     unset($plan);
     return $plans;
@@ -158,5 +186,5 @@ function reinigungsplan_schema_missing(Throwable $error): bool {
     }
     $sqlState = (string)($error->errorInfo[0] ?? $error->getCode());
     $driverCode = (int)($error->errorInfo[1] ?? 0);
-    return $sqlState === '42S02' || $driverCode === 1146;
+    return in_array($sqlState, ['42S02', '42S22'], true) || in_array($driverCode, [1146, 1054], true);
 }

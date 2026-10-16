@@ -22,11 +22,14 @@ function check_same($expected, $actual): void
     }
 }
 
-function check_throws(callable $callback): void
+function check_throws(callable $callback, string $expectedClass = Throwable::class): void
 {
     try {
         $callback();
     } catch (Throwable $error) {
+        if (!$error instanceof $expectedClass) {
+            throw new RuntimeException('Erwartet wurde ' . $expectedClass . ', erhalten wurde ' . get_class($error) . '.');
+        }
         return;
     }
     throw new RuntimeException('Ungültige Eingabe wurde nicht abgewiesen.');
@@ -115,6 +118,114 @@ run_case('Vor Planbeginn sind die ersten vier Zeiträume zukünftig', function (
         expected_period('2026-11-02', '2026-11-08', 7, 'Erdgeschoss', false),
     ], reinigungsplan_periods($weekly, $groups, date_at('2026-10-11 23:59:59')));
 });
+
+$finiteWeekly = array_replace($weekly, ['enddatum' => '2026-11-01']);
+
+run_case('Enddatum begrenzt die Vorschau vor Beginn auf genau drei Wochen', function () use ($finiteWeekly, $groups): void {
+    check_same([
+        expected_period('2026-10-12', '2026-10-18', 7, 'Erdgeschoss', false),
+        expected_period('2026-10-19', '2026-10-25', 11, 'Obergeschoss', false),
+        expected_period('2026-10-26', '2026-11-01', 19, 'Dachgeschoss', false),
+    ], reinigungsplan_periods($finiteWeekly, $groups, date_at('2026-10-01'), 10));
+});
+
+run_case('Befristeter Wochenplan wiederholt nach der dritten Gruppe nicht automatisch', function () use ($finiteWeekly, $groups): void {
+    check_same([
+        expected_period('2026-10-12', '2026-10-18', 7, 'Erdgeschoss', true),
+        expected_period('2026-10-19', '2026-10-25', 11, 'Obergeschoss', false),
+        expected_period('2026-10-26', '2026-11-01', 19, 'Dachgeschoss', false),
+    ], reinigungsplan_periods($finiteWeekly, $groups, date_at('2026-10-12')));
+});
+
+run_case('Am Enddatum bleibt die letzte Gruppe bis Tagesende zuständig', function () use ($finiteWeekly, $groups): void {
+    check_same([
+        expected_period('2026-10-26', '2026-11-01', 19, 'Dachgeschoss', true),
+    ], reinigungsplan_periods($finiteWeekly, $groups, date_at('2026-11-01 23:59:59')));
+});
+
+foreach (['2026-11-02 00:00:00', '2026-12-01'] as $afterEnd) {
+    run_case('Nach Ende erscheint kein weiterer Turnus: ' . $afterEnd, function () use ($finiteWeekly, $groups, $afterEnd): void {
+        check_same([], reinigungsplan_periods($finiteWeekly, $groups, date_at($afterEnd)));
+    });
+}
+
+run_case('Enddatum innerhalb einer Woche kürzt nur den letzten Zeitraum', function () use ($weekly, $groups): void {
+    $plan = array_replace($weekly, ['enddatum' => '2026-10-28']);
+    check_same([
+        expected_period('2026-10-12', '2026-10-18', 7, 'Erdgeschoss', true),
+        expected_period('2026-10-19', '2026-10-25', 11, 'Obergeschoss', false),
+        expected_period('2026-10-26', '2026-10-28', 19, 'Dachgeschoss', false),
+    ], reinigungsplan_periods($plan, $groups, date_at('2026-10-16')));
+    check_same([
+        expected_period('2026-10-26', '2026-10-28', 19, 'Dachgeschoss', true),
+    ], reinigungsplan_periods($plan, $groups, date_at('2026-10-28 23:59:59')));
+});
+
+run_case('Gleiches Startdatum und Enddatum ergibt einen einzigen Reinigungstag', function () use ($weekly, $groups): void {
+    $plan = array_replace($weekly, ['enddatum' => '2026-10-12']);
+    check_same([
+        expected_period('2026-10-12', '2026-10-12', 7, 'Erdgeschoss', true),
+    ], reinigungsplan_periods($plan, $groups, date_at('2026-10-12 12:00:00')));
+    check_same([], reinigungsplan_periods($plan, $groups, date_at('2026-10-13')));
+});
+
+run_case('Enddatum auf einem Turnusbeginn schließt diesen Tag der nächsten Gruppe ein', function () use ($weekly, $groups): void {
+    $plan = array_replace($weekly, ['enddatum' => '2026-10-19']);
+    check_same([
+        expected_period('2026-10-12', '2026-10-18', 7, 'Erdgeschoss', false),
+        expected_period('2026-10-19', '2026-10-19', 11, 'Obergeschoss', false),
+    ], reinigungsplan_periods($plan, $groups, date_at('2026-10-11')));
+    check_same([
+        expected_period('2026-10-19', '2026-10-19', 11, 'Obergeschoss', true),
+    ], reinigungsplan_periods($plan, $groups, date_at('2026-10-19 23:59:59')));
+});
+
+foreach ([null, ''] as $emptyEnd) {
+    run_case('Leeres Enddatum erhält den unbegrenzten Rhythmus: ' . var_export($emptyEnd, true), function () use ($weekly, $groups, $emptyEnd): void {
+        $today = date_at('2026-11-16');
+        check_same(
+            reinigungsplan_periods($weekly, $groups, $today),
+            reinigungsplan_periods(array_replace($weekly, ['enddatum' => $emptyEnd]), $groups, $today)
+        );
+    });
+}
+
+foreach (['2026-10-11', '2026-02-30', '01.11.2026', '2026-13-01'] as $invalidEnd) {
+    run_case('Ungültiges Enddatum wird als Validierungsfehler abgewiesen: ' . $invalidEnd, function () use ($weekly, $groups, $invalidEnd): void {
+        check_throws(function () use ($weekly, $groups, $invalidEnd): void {
+            reinigungsplan_periods(array_replace($weekly, ['enddatum' => $invalidEnd]), $groups, date_at('2026-10-16'));
+        }, InvalidArgumentException::class);
+    });
+}
+
+run_case('Befristeter Monatsplan behält Monatsendanker und inklusive Enddatum', function () use ($groups): void {
+    $plan = ['startdatum' => '2025-01-31', 'enddatum' => '2025-03-31', 'intervall' => 1, 'einheit' => 'monate'];
+    check_same([
+        expected_period('2025-01-31', '2025-02-27', 7, 'Erdgeschoss', false),
+        expected_period('2025-02-28', '2025-03-30', 11, 'Obergeschoss', false),
+        expected_period('2025-03-31', '2025-03-31', 19, 'Dachgeschoss', false),
+    ], reinigungsplan_periods($plan, $groups, date_at('2025-01-30')));
+});
+
+run_case('Befristeter Tagesplan endet bei Sommerzeitbeginn am lokalen Tagesende', function () use ($groups): void {
+    $plan = ['startdatum' => '2026-03-28', 'enddatum' => '2026-03-29', 'intervall' => 1, 'einheit' => 'tage'];
+    check_same([
+        expected_period('2026-03-29', '2026-03-29', 11, 'Obergeschoss', true),
+    ], reinigungsplan_periods($plan, $groups, date_at('2026-03-29 23:59:59')));
+    check_same([], reinigungsplan_periods($plan, $groups, date_at('2026-03-30 00:00:00')));
+});
+
+foreach (['tage', 'wochen', 'monate'] as $unit) {
+    run_case('Explizites Ende an der DB-Datumsgrenze verhindert Vorschauüberlauf: ' . $unit, function () use ($unit, $groups): void {
+        $plan = ['startdatum' => '9999-12-31', 'enddatum' => '9999-12-31', 'intervall' => 1, 'einheit' => $unit];
+        check_same([
+            expected_period('9999-12-31', '9999-12-31', 7, 'Erdgeschoss', false),
+        ], reinigungsplan_periods($plan, $groups, date_at('2026-10-16')));
+        check_same([
+            expected_period('9999-12-31', '9999-12-31', 7, 'Erdgeschoss', true),
+        ], reinigungsplan_periods($plan, $groups, date_at('9999-12-31 23:59:59')));
+    });
+}
 
 run_case('Drei Kalendertage und mehrere abgelaufene Gruppen', function () use ($groups): void {
     $plan = ['startdatum' => '2026-01-01', 'intervall' => 3, 'einheit' => 'tage'];
@@ -259,7 +370,7 @@ function test_database(bool $withFixtures = true): PDO
         PDO::ATTR_STRINGIFY_FETCHES => true,
     ]);
     $pdo->exec('CREATE TABLE reinigungsplaene (
-        id INTEGER PRIMARY KEY, titel TEXT, details TEXT, startdatum TEXT,
+        id INTEGER PRIMARY KEY, titel TEXT, details TEXT, startdatum TEXT, enddatum TEXT NULL,
         intervall INTEGER, einheit TEXT, aktiv INTEGER,
         erstellt_am TEXT, aktualisiert_am TEXT
     )');
@@ -301,16 +412,24 @@ run_case('DB-Laden filtert standardmäßig aktive Pläne und sortiert Titel sowi
     check_same(['Eingang', 'Treppenhaus', 'Treppenhaus'], array_column($plans, 'titel'));
     check_same([1, 1, 1], array_column($plans, 'aktiv'));
     check_same([1, 1, 1], array_column($plans, 'intervall'));
+    check_same([null, null, null], array_column($plans, 'enddatum'));
+    check_same([false, false, false], array_column($plans, 'beendet'));
 });
 
 run_case('DB-Laden kann inaktive Pläne einschließen und bewahrt UTF-8-Texte', function (): void {
-    $plans = reinigungsplan_load(test_database(), false);
+    $pdo = test_database();
+    $pdo->exec('UPDATE reinigungsplaene SET enddatum = startdatum WHERE id = 12');
+    $plans = reinigungsplan_load($pdo, false);
     check_same([21, 12, 3, 30], array_column($plans, 'id'));
     check_same('Küche', $plans[1]['titel']);
     check_same('Öfen, Spülen und große Flächen reinigen.', $plans[1]['details']);
     check_same(0, $plans[1]['aktiv']);
     check_same('2026-01-01 10:00:00', $plans[1]['erstellt_am']);
     check_same('2026-01-02 11:00:00', $plans[1]['aktualisiert_am']);
+    check_same($plans[1]['startdatum'], $plans[1]['enddatum']);
+    check_same(false, $plans[1]['beendet']);
+    check_same(1, count($plans[1]['perioden']));
+    check_same($plans[1]['enddatum'], $plans[1]['perioden'][0]['bis']);
 });
 
 run_case('DB-Laden ordnet Gruppen je Plan nach Position und behält inaktive Gruppen', function (): void {

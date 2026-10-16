@@ -22,6 +22,7 @@ Kurzübersicht für den aktuellen Stand, damit man direkt weiß, wo es weitergeh
 - `aufgaben.js` Aufgaben
 - `reinigungsplan.js` aktuelle Reinigungszuständigkeit und nächster Gruppenwechsel
 - `abfahrten.js` ÖPNV-Anzeige
+- `abfahrten_helper.php` VVO-Abfahrtsimport, Zeitumrechnung und gemeinsamer Datenbankcache
 - `sonstige.js` Sonstige Termine + Zuhause-Modal
 
 Admin/Config:
@@ -77,12 +78,20 @@ cp database/init/001-schema.sql /srv/docker/hausordnung/data/initdb/001-schema.s
 ```
 
 Die SQL-Datei wird nur beim ersten Start einer leeren MariaDB-Datenbank
-automatisch importiert. Sie enthält bereits die Tabellen für Reinigungspläne.
+automatisch importiert. Sie enthält bereits die Tabellen für Reinigungspläne
+einschließlich des optionalen Enddatums.
 
-Bei einer bestehenden Datenbank nur `database/migrations/002-reinigungsplan.sql`
-importieren. Nicht das komplette `schema.sql` oder `database/init/001-schema.sql`
-erneut importieren. Die Migration ergänzt die neuen Tabellen und erhält die
-vorhandenen Bewohnergruppen und Daten. Der Import ist über phpMyAdmin möglich:
+Bei einer bestehenden Datenbank die folgenden Migrationen in dieser Reihenfolge
+importieren:
+
+1. `database/migrations/002-reinigungsplan.sql` ergänzt die Tabellen für Reinigungspläne.
+2. `database/migrations/003-reinigungsplan-ende.sql` ergänzt das optionale Enddatum.
+
+Bereits ausgeführte Migrationen müssen nicht erneut importiert werden. Ist die
+Migration 002 bereits ausgeführt, genügt die Migration 003. Nicht das komplette
+`schema.sql` oder `database/init/001-schema.sql` erneut importieren. Die
+Migrationen erhalten die vorhandenen Bewohnergruppen und Daten. Der Import ist
+über phpMyAdmin möglich:
 
 `http://192.168.112.30:28831/`
 
@@ -92,8 +101,32 @@ gesetzt werden.
 
 ## Abfahrten-Import
 
-`cron_abfahrten.php` nutzt jetzt die DB-Schnittstelle
-`int.bahn.de/web/api/reiseloesung/abfahrten`.
+Die Abfahrten kommen aus dem gemeinsamen Abfahrtsmonitor von ZVON/VVO über
+`https://webapi.vvo-online.de/dm`. Die bisherige Bahn-Schnittstelle blockiert
+die Abrufe und wird nicht mehr verwendet.
+
+Verwendete Haltestellen:
+
+| Anzeige | VVO-Haltestelle | Vorhandene Datenbank-ID |
+| --- | --- | --- |
+| Görlitz Hbf | `14908885` | `8010131` |
+| Lutherstraße | `14908970` | `977263` |
+| Bahnhof Südausgang | `14908886` | `977198` |
+
+`abfahrten.php` aktualisiert beim Abruf den gemeinsamen Cache bei Bedarf.
+Ein Datenbank-Lock verhindert gleichzeitige Importe. Auch bei Quellfehlern
+erfolgt höchstens ein automatischer Versuch pro Minute. Ein Host-Cronjob ist
+dadurch für die laufende Kiosk-Anzeige nicht erforderlich. Bereits vorhandene
+gültige Abfahrten bleiben erhalten, wenn eine Datenquelle ausfällt.
+
+Die Uhrzeiten werden in `Europe/Berlin` gespeichert. Busse am Südausgang
+werden auf die konfigurierten Linien A, B, C, D, E, F, N, 62 und 67 begrenzt.
+Die Anzahl der angezeigten Abfahrten steht in `config.php` unter
+`departureLimits` (Zug 6, Tram 2, Bus 4).
+
+Die bestehenden `DATETIME`-Spalten speichern lokale Uhrzeiten ohne UTC-Offset.
+Während der doppelt vorkommenden Stunde bei der Zeitumstellung können
+zeitgleiche Fahrten deshalb zusammenfallen.
 
 Import manuell auf dem Docker-Host im Container ausführen:
 
@@ -104,6 +137,10 @@ docker compose -f docker/docker-compose.yml --env-file docker/.env exec app php 
 Import per Browser ausführen:
 
 `http://192.168.112.30:28830/cron_abfahrten.php`
+
+`cron_abfahrten.php` verwendet denselben Import und dasselbe Minutenlimit.
+Ein fehlgeschlagener Import liefert HTTP 503 anstelle eines irreführenden OK.
+Die Parser- und Filterprüfungen laufen mit `php tests/abfahrten_test.php`.
 
 ## Konfiguration
 Secrets nur per ENV:
@@ -129,27 +166,34 @@ In `admin.php` den Link zum Reinigungsplan öffnen oder direkt
 
 1. Vorhandene Bewohnergruppen verwenden oder neue Gruppen anlegen, zum Beispiel
    „Erdgeschoss“ und „Obergeschoss“.
-2. Einen Plan mit Bezeichnung, Startdatum und optionalen Hinweisen anlegen.
+2. Einen Plan mit Bezeichnung, Startdatum, optionalem Enddatum und optionalen
+   Hinweisen anlegen. Das Enddatum gilt einschließlich. Ein leeres Enddatum
+   bedeutet unbegrenzte Wiederholung.
 3. Das Intervall zwischen 1 und 365 eingeben und Tage, Wochen oder Monate wählen.
 4. Die Reihenfolge über Positionen festlegen, zum Beispiel 1, 2 und 3. Gruppen mit
    leerem Positionsfeld nehmen nicht teil. Die erste Gruppe beginnt am Startdatum.
 5. Den Plan speichern. Die Vorschau zeigt den aktuellen und die drei folgenden
-   Zeiträume. Liegt der Start in der Zukunft, zeigt sie die ersten vier Zeiträume.
+   Zeiträume, soweit sie durch das optionale Enddatum abgedeckt sind. Liegt der Start in der Zukunft,
+   zeigt sie die ersten vier Zeiträume bis höchstens zum Enddatum.
 
 Bei einem Wochenintervall und Start am Montag wechselt die Zuständigkeit jeden
-Montag. Nach der letzten Gruppe beginnt die Reihenfolge von vorn. Bei
+Montag. Nach der letzten Gruppe beginnt die Reihenfolge von vorn, solange das
+Enddatum noch nicht überschritten ist. Bei
 Monatsintervallen gilt der ursprüngliche Starttag. In kürzeren Monaten wird das
 Monatsende verwendet.
 
 Der Kiosk zeigt automatisch die aktuelle Gruppe, ihren Zeitraum einschließlich
-Enddatum und die nächste Gruppe mit Wechseldatum. Vor dem ersten Zeitraum wird
-das Startdatum angezeigt. Die Anzeige wird alle fünf Minuten aktualisiert.
+des letzten Tages und die nächste Gruppe mit Wechseldatum. Vor dem ersten
+Zeitraum wird das Startdatum angezeigt. Nach dem optionalen Enddatum folgen
+keine weiteren automatischen Wiederholungen. Der Kiosk zeigt dann, dass der Plan
+beendet und noch kein weiterer Reinigungsplan festgelegt ist. Die Anzeige wird
+alle fünf Minuten aktualisiert.
 
 Pläne können pausiert und wieder aktiviert werden. Während der Pause ist der Plan
 im Kiosk ausgeblendet, der Kalender läuft weiter. Änderungen an Startdatum,
-Intervall oder Gruppenreihenfolge berechnen alle Zuständigkeiten rückwirkend ab
-dem Startdatum neu. Der Reinigungsplan hat keinen Erledigt-Status und benötigt
-keinen Cronjob.
+Enddatum, Intervall oder Gruppenreihenfolge berechnen alle Zuständigkeiten
+rückwirkend ab dem Startdatum neu. Der Reinigungsplan hat keinen Erledigt-Status
+und benötigt keinen Cronjob.
 
 Die Berechnung lässt sich ohne Datenbank prüfen:
 
@@ -165,7 +209,8 @@ Die Datei `.github/workflows/test-und-upload.yml` zeigt einen einfachen Ablauf:
 - Docker-Image bauen
 - PHP-Syntax im Container prüfen
 - Reinigungsrhythmus mit den CLI-Tests im Container prüfen
-- Projektdateien inklusive DB-Schema und Migration als Artifact `hausordnung-kiosk` hochladen
+- Zeitparser und Haltestellenfilter für Abfahrten im Container prüfen
+- Projektdateien inklusive DB-Schema und Migrationen als Artifact `hausordnung-kiosk` hochladen
 - bei Push auf `main` nur die Webdateien per FTP nach `htdocs` hochladen
 
 Für GitHub Actions müssen diese Repository-Secrets angelegt werden:
@@ -216,7 +261,7 @@ Bestehende Kern-Tabellen:
 
 - `benutzer`, `benutzer_gruppen`
 - `aufgaben`, `aufgaben_erledigt`
-- `reinigungsplaene` (Startdatum, Intervall, Einheit und Aktivstatus)
+- `reinigungsplaene` (Startdatum, optionales Enddatum, Intervall, Einheit und Aktivstatus)
 - `reinigungsplan_gruppen` (Bewohnergruppen je Plan mit ihrer Reihenfolge)
 - `termine_abfall`, `termine_abfall_erledigt`
 - `termine_sonstige` (mit `requires_home`)

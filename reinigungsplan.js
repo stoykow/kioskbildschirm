@@ -40,6 +40,14 @@
             addText(card, 'p', 'reinigungsplan-details', String(plan.details));
         }
         if (!Array.isArray(plan.periods)) throw new Error('Invalid cleaning periods');
+        if (plan.ended === true) {
+            addText(card, 'p', 'reinigungsplan-status', `Plan beendet am ${formatDate(plan.end_date)}`);
+            addText(card, 'p', 'reinigungsplan-next', 'Noch kein weiterer Reinigungsplan festgelegt.');
+            return card;
+        }
+        if (plan.end_date) {
+            addText(card, 'p', 'reinigungsplan-status', `Geplant bis einschließlich ${formatDate(plan.end_date)}`);
+        }
         if (plan.periods.length === 0) {
             addText(card, 'p', 'reinigungsplan-status', 'Für diesen Reinigungsplan ist keine Bewohnergruppe verfügbar.');
             return card;
@@ -59,6 +67,9 @@
         if (next) {
             addText(card, 'p', 'reinigungsplan-next',
                 `Nächster Wechsel am ${formatDate(next.start)}: ${String(next.group_name || 'Bewohnergruppe')}`);
+        } else if (plan.end_date) {
+            addText(card, 'p', 'reinigungsplan-next',
+                `Nach dem ${formatDate(plan.end_date)} ist noch kein weiterer Reinigungsplan festgelegt.`);
         }
         return card;
     }

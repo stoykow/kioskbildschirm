@@ -20,7 +20,7 @@ Kurzübersicht für den aktuellen Stand, damit man direkt weiß, wo es weitergeh
 - `wetter.js` Umwelt/Status (kompakt, Haustür in eigener Zeile)
 - `abfall.js` Abfall + Aufgaben (Abfall nur anzeigen, wenn vorhanden)
 - `aufgaben.js` Aufgaben
-- `reinigungsplan.js` aktuelle Reinigungszuständigkeit und nächster Gruppenwechsel
+- `reinigungsplan_aufgaben.php` erzeugt die freitags fälligen Reinigungsaufgaben
 - `abfahrten.js` ÖPNV-Anzeige
 - `abfahrten_helper.php` VVO-Abfahrtsimport, Zeitumrechnung und gemeinsamer Datenbankcache
 - `sonstige.js` Sonstige Termine + Zuhause-Modal
@@ -182,23 +182,27 @@ Enddatum noch nicht überschritten ist. Bei
 Monatsintervallen gilt der ursprüngliche Starttag. In kürzeren Monaten wird das
 Monatsende verwendet.
 
-Der Kiosk zeigt automatisch die aktuelle Gruppe, ihren Zeitraum einschließlich
-des letzten Tages und die nächste Gruppe mit Wechseldatum. Vor dem ersten
-Zeitraum wird das Startdatum angezeigt. Nach dem optionalen Enddatum folgen
-keine weiteren automatischen Wiederholungen. Der Kiosk zeigt dann, dass der Plan
-beendet und noch kein weiterer Reinigungsplan festgelegt ist. Die Anzeige wird
-alle fünf Minuten aktualisiert.
+Die Reinigung erscheint im Kiosk unter **Aufgaben**. Jede Kalenderwoche entsteht
+eine Aufgabe, die am Freitag fällig ist. Die zuständige Gruppe ergibt sich aus
+der Planrotation an diesem Freitag. Die Aufgabe wird ab Montag derselben Woche
+angezeigt und kann wie andere Aufgaben als erledigt markiert werden. Offene
+überfällige Aufgaben bleiben sichtbar. Nach dem optionalen Enddatum entstehen
+keine Aufgaben mit späterer Fälligkeit. Die Anzeige wird alle fünf Minuten
+aktualisiert.
 
-Pläne können pausiert und wieder aktiviert werden. Während der Pause ist der Plan
-im Kiosk ausgeblendet, der Kalender läuft weiter. Änderungen an Startdatum,
-Enddatum, Intervall oder Gruppenreihenfolge berechnen alle Zuständigkeiten
-rückwirkend ab dem Startdatum neu. Der Reinigungsplan hat keinen Erledigt-Status
-und benötigt keinen Cronjob.
+Pläne können pausiert und wieder aktiviert werden, der Kalender läuft dabei
+weiter. Änderungen an Startdatum, Enddatum, Intervall oder Gruppenreihenfolge
+aktualisieren offene Aufgaben mit heutiger oder zukünftiger Fälligkeit.
+Erledigte und bereits überfällige Aufgaben behalten ihre Zuordnung und ihren
+Status. Ein wiederholter Abruf erzeugt keine Doppelungen. Neue Aufgaben werden
+nur für die aktuelle und die beiden folgenden Kalenderwochen vorbereitet.
+Die Synchronisierung erfolgt über `aufgaben_api.php` und benötigt keinen Cronjob.
 
 Die Berechnung lässt sich ohne Datenbank prüfen:
 
 ```bash
 php tests/reinigungsplan_test.php
+php tests/reinigungsplan_aufgaben_test.php
 ```
 
 ## GitHub CI/CD
@@ -245,7 +249,7 @@ Endungen PHP, JS, CSS und ICS sowie `.htaccess`.
 ## GitLab CI/CD
 
 Das zweite Remote `origin` verweist auf
-`https://gitlab.stoykow.de/apps/hausordnung.git`. Die Pipeline in
+`https://gitlab.stoykow.de/webseiten/webseite-kiosk-hausordnung.git`. Die Pipeline in
 `.gitlab-ci.yml` prüft PHP, JavaScript und die Reinigungsplan- und Abfahrtstests.
 Anschließend erstellt sie ein Webpaket und ein getrenntes Datenbankpaket.
 Nur das Webpaket wird auf `main` per FTP hochgeladen. Die Datenbankmigrationen
@@ -337,7 +341,7 @@ Hinweis: Tabelle `wetter_daten` wurde zu `wetter_weather` umbenannt.
 - Schadstoffmobil ist nicht klickbar und zeigt keinen Unerledigt-Status.
 - Sonstige Termine: Status "Keiner zuhause" nur wenn `requires_home=1` und keine Auswahl.
 - Haustür-Status farbig: aufgeschlossen rot, zugeschlossen grün.
-- Reinigungspläne erscheinen unter dem Wetter. Ohne aktive Pläne bleibt der Bereich ausgeblendet.
+- Reinigungsaufgaben erscheinen ab Montag unter Aufgaben und sind freitags fällig.
 
 ## Device-Registrierung
 - `device_register.php` nimmt `device_name`, erzeugt `device_id`, speichert in `geraete_registrierungen`.

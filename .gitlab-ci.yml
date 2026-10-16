@@ -30,6 +30,7 @@ php-tests:
   image: php:8.3-cli
   script:
     - php tests/reinigungsplan_test.php
+    - php tests/reinigungsplan_aufgaben_test.php
     - php tests/abfahrten_test.php
 
 javascript-syntax:

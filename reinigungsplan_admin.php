@@ -260,7 +260,7 @@ $unitLabels = ['tage' => 'Tage', 'wochen' => 'Wochen', 'monate' => 'Monate'];
 <body>
     <nav><a href="admin.php">Zur Administration</a> · <a href="index.php">Zum Kiosk</a></nav>
     <h1>Reinigungsrhythmus</h1>
-    <p>Lege fest, wie lange eine Bewohnergruppe zuständig ist und in welcher Reihenfolge sich die Gruppen abwechseln.</p>
+    <p>Lege fest, wie lange eine Bewohnergruppe zuständig ist und in welcher Reihenfolge sich die Gruppen abwechseln. Die zugehörige Reinigungsaufgabe ist jede Woche am Freitag fällig.</p>
     <?php if ($notice !== '' && $error === ''): ?>
         <p class="message" role="status"><?php echo reinigungsplan_admin_h($notice); ?></p>
     <?php endif; ?>
@@ -315,8 +315,8 @@ $unitLabels = ['tage' => 'Tage', 'wochen' => 'Wochen', 'monate' => 'Monate'];
                 <?php endforeach; ?>
                 </tbody></table>
             <?php endif; ?>
-            <label class="checkbox"><input type="checkbox" name="aktiv" value="1"<?php echo $form['aktiv'] ? ' checked' : ''; ?>> Im Kiosk anzeigen</label>
-            <p class="note">Änderungen an Startdatum, Enddatum, Intervall oder Reihenfolge berechnen die Zuständigkeiten ab dem Startdatum neu. Beim Pausieren läuft der Kalender weiter.</p>
+            <label class="checkbox"><input type="checkbox" name="aktiv" value="1"<?php echo $form['aktiv'] ? ' checked' : ''; ?>> Plan aktiv, wöchentliche Reinigungsaufgaben erzeugen</label>
+            <p class="note">Änderungen an Startdatum, Enddatum, Intervall oder Reihenfolge aktualisieren offene Aufgaben mit heutiger oder zukünftiger Fälligkeit. Bereits erledigte und überfällige Aufgaben bleiben erhalten. Beim Pausieren läuft der Kalender weiter.</p>
             <div class="actions"><button class="primary" type="submit"<?php echo !$groups ? ' disabled' : ''; ?>>Rhythmus speichern</button><?php if ($form['id'] > 0): ?><a href="reinigungsplan_admin.php">Neuen Plan anlegen</a><?php endif; ?></div>
         </form>
     </div>

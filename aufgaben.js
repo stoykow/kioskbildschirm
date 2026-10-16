@@ -1,9 +1,13 @@
 // aufgaben.js
 // Aufgaben laden + Erledigt-Markierung
 
+(function () {
+    'use strict';
+
 let tasksCache = [];
 let taskUsersCache = null;
 let taskModalReady = false;
+let taskLoadError = false;
 
 function escapeHtml(value) {
     return String(value || '')
@@ -56,6 +60,10 @@ function parseDateLocal(dateStr) {
 }
 
 function getShowFrom(task) {
+    if (task && task.show_from) {
+        const explicit = parseTimestamp(task.show_from);
+        if (explicit) return explicit;
+    }
     if (!task || !task.due) return null;
     const target = parseDateLocal(task.due);
     if (!target) return null;
@@ -91,9 +99,10 @@ function shouldShowTask(task) {
 
 function buildTasksSection(entries, interactive) {
     const title = '<div class="task-title">Aufgaben</div>';
+    const warning = taskLoadError ? '<div class="task-row">Die Aufgaben konnten gerade nicht aktualisiert werden.</div>' : '';
     if (!Array.isArray(entries) || entries.length === 0) {
         return {
-            html: `${title}<div class="task-row">Keine Aufgaben offen</div>`,
+            html: `${title}${warning || '<div class="task-row">Keine Aufgaben offen</div>'}`,
             bind: null
         };
     }
@@ -101,7 +110,7 @@ function buildTasksSection(entries, interactive) {
     const visibleEntries = entries.filter(task => shouldShowTask(task));
     if (visibleEntries.length === 0) {
         return {
-            html: `${title}<div class="task-row">Keine Aufgaben offen</div>`,
+            html: `${title}${warning || '<div class="task-row">Keine Aufgaben offen</div>'}`,
             bind: null
         };
     }
@@ -111,7 +120,7 @@ function buildTasksSection(entries, interactive) {
         if (interactive) rowClasses.push('task-clickable');
         if (task.done_by) rowClasses.push('task-row-done');
         const dataAttr = interactive ? `data-task-id="${task.id}"` : '';
-        const dueText = task.due ? getLabel(task.due) : 'Ohne Datum';
+        const dueText = getTaskDueLabel(task);
         const titleText = escapeHtml(decodeHtmlEntities(task.title));
         const groupName = task.group ? decodeHtmlEntities(task.group) : 'offen';
         const doneText = task.done_by ? `Erledigt: ${decodeHtmlEntities(task.done_by)}` : 'Unerledigt';
@@ -129,9 +138,20 @@ function buildTasksSection(entries, interactive) {
     }).join('');
 
     return {
-        html: `${title}${rows}`,
+        html: `${title}${warning}${rows}`,
         bind: interactive ? bindTaskRowHandlers : null
     };
+}
+
+function getTaskDueLabel(task) {
+    if (!task.due) return 'Ohne Datum';
+    if (!String(task.source_type || '').startsWith('reinigungsplan_')) return getLabel(task.due);
+    const due = parseDateLocal(task.due);
+    if (!due) return getLabel(task.due);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const prefix = due < today ? 'Überfällig: ' : 'Fällig: ';
+    return prefix + due.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit' });
 }
 
 function renderAll() {
@@ -163,6 +183,7 @@ function ensureTaskModal() {
         <div class="task-modal-card">
             <div class="task-modal-title">Aufgabe</div>
             <div class="task-modal-sub"></div>
+            <div class="task-modal-details"></div>
             <div class="task-user-list"></div>
             <div class="task-modal-actions">
                 <button class="task-modal-confirm">OK</button>
@@ -209,10 +230,13 @@ function openTaskModal(taskId) {
     const list = modal.querySelector('.task-user-list');
 
     title.textContent = taskItem.title;
-    const dueText = taskItem.due ? getLabel(taskItem.due) : 'Ohne Datum';
+    const dueText = getTaskDueLabel(taskItem);
     const groupText = taskItem.group ? `Zuständig: ${decodeHtmlEntities(taskItem.group)}` : 'Zuständig: offen';
     const doneText = taskItem.done_by ? `Erledigt: ${decodeHtmlEntities(taskItem.done_by)}` : 'Unerledigt';
     sub.textContent = `${dueText} - ${groupText} - ${doneText}`;
+    const details = modal.querySelector('.task-modal-details');
+    details.textContent = taskItem.details || '';
+    details.hidden = !taskItem.details;
     modal.setAttribute('data-task-id', String(taskItem.id));
 
     list.innerHTML = '<div class="task-loading">Benutzer werden geladen...</div>';
@@ -318,20 +342,26 @@ function bindTaskRowHandlers() {
 
 function fetchTasks() {
     fetch('aufgaben_api.php')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) throw new Error('Tasks unavailable');
+            return response.json();
+        })
         .then(data => {
             if (!data || !Array.isArray(data.tasks)) {
                 throw new Error('Invalid aufgaben_api response');
             }
             tasksCache = data.tasks;
+            taskLoadError = false;
             renderAll();
         })
         .catch(() => {
-            tasksCache = [];
+            taskLoadError = true;
             renderAll();
         });
 }
 
+window.fetchTasks = fetchTasks;
 window.hausordnungTasks = {
     buildSection: () => buildTasksSection(tasksCache, true),
 };
+}());

@@ -18,7 +18,6 @@ header("Expires: 0");
     <div id="main-flex">
         <div id="links">
             <div id="weather">Lädt Wetterdaten...</div>
-            <section id="reinigungsplan" aria-label="Reinigungsplan" hidden></section>
             <div id="termine">Termine...</div>
         </div>
         <div id="rechts">
@@ -32,7 +31,6 @@ header("Expires: 0");
     <script src="abfall.js?v=<?php echo time(); ?>"></script>
     <script src="sonstige.js?v=<?php echo time(); ?>"></script>
     <script src="aufgaben.js?v=<?php echo time(); ?>"></script>
-    <script src="reinigungsplan.js?v=<?php echo time(); ?>"></script>
     <script>
         window.kioskDepartureLimits = <?php echo json_encode([
             'zug' => departure_limit('zug'),

@@ -6,7 +6,6 @@ function initKiosk() {
     fetchWaste();
     fetchSonstige();
     fetchTasks();
-    fetchReinigungsplan();
     fetchTrains();
     fetchTrams();
     fetchBus();
@@ -18,7 +17,6 @@ function initKiosk() {
     setInterval(fetchWaste, 300000); // Aktualisiere die Abfallkalender alle 5 Minuten
     setInterval(fetchSonstige, 300000); // Aktualisiere die sonstigen Termine alle 5 Minuten
     setInterval(fetchTasks, 300000); // Aktualisiere die Aufgaben alle 5 Minuten
-    setInterval(fetchReinigungsplan, 300000); // Aktualisiere den Reinigungsplan alle 5 Minuten
     setInterval(() => location.reload(), 1200000); // kompletter Reload alle 20 Minuten
 }
 

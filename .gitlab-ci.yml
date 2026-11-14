@@ -39,6 +39,12 @@ javascript-syntax:
   script:
     - for file in ./*.js; do node --check "$file" || exit 1; done
 
+abfall-anzeige:
+  stage: test
+  image: node:22-alpine
+  script:
+    - node tests/abfall_ui_test.cjs
+
 web-package:
   stage: package
   image: alpine:3.23

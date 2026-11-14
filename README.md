@@ -338,10 +338,20 @@ Hinweis: Tabelle `wetter_daten` wurde zu `wetter_weather` umbenannt.
 ## UI-Logik (kurz)
 
 - Abfall und Sonstige werden nur angezeigt, wenn Termine vorhanden sind.
+- Bevorstehende Abfalltermine bleiben bis zur Leerung sichtbar, auch wenn die
+  Tonne schon als rausgestellt markiert wurde. Die Vorschau zeigt dann
+  „Bereits rausgestellt“ statt den ganzen Termin auszublenden.
+- Aufgaben zum Rausstellen erscheinen ab dem Vortag, Aufgaben zum Reinstellen
+  ab 06:00 Uhr am Abholtag. Eine vorzeitige Rausstellmarkierung zieht die
+  Reinstellaufgabe nicht vor den Leerungstermin.
+- Ein Fehler beim Laden der Abfalltermine lässt bereits geladene Aufgaben
+  und Termine sichtbar und ergänzt einen eigenen Fehlerhinweis.
 - Schadstoffmobil ist nicht klickbar und zeigt keinen Unerledigt-Status.
 - Sonstige Termine: Status "Keiner zuhause" nur wenn `requires_home=1` und keine Auswahl.
 - Haustür-Status farbig: aufgeschlossen rot, zugeschlossen grün.
 - Reinigungsaufgaben erscheinen ab Montag unter Aufgaben und sind freitags fällig.
+
+Die Anzeige lässt sich mit `node tests/abfall_ui_test.cjs` prüfen.
 
 ## Device-Registrierung
 - `device_register.php` nimmt `device_name`, erzeugt `device_id`, speichert in `geraete_registrierungen`.

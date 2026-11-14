@@ -28,6 +28,9 @@ jobs:
       - name: Abfahrtsdaten und Haltestellenfilter prüfen
         run: docker run --rm hausordnung-kiosk php /var/www/html/tests/abfahrten_test.php
 
+      - name: Sichtbarkeit der Tonnen und Aufgaben prüfen
+        run: node tests/abfall_ui_test.cjs
+
       - name: Upload-Paket vorbereiten
         run: |
           mkdir -p upload/htdocs upload/database/init upload/database/migrations

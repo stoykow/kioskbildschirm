@@ -5,6 +5,7 @@ let wasteEventsCache = [];
 let wasteUsersCache = null;
 let wasteModalReady = false;
 let wasteInteractive = false;
+let wasteLoadError = false;
 
 function escapeHtml(value) {
     return String(value || '')
@@ -73,13 +74,20 @@ function parseTimestamp(value) {
 
 function shouldShowWasteEvent(eventItem, phase, ignoreShowFrom) {
     const now = new Date();
+    const eventDate = parseDateLocal(eventItem.date);
+    const today = new Date(now.getTime());
+    today.setHours(0, 0, 0, 0);
+    // Der ICS-Fallback kann auch vergangene Termine enthalten.
+    if (!eventDate || eventDate < today) return false;
     if (!ignoreShowFrom) {
         const showFrom = getShowFrom(eventItem.date);
         if (showFrom && now < showFrom) return false;
     }
 
-    const doneAtValue = phase === 'reinstellen' ? eventItem.rein_done_at : eventItem.done_at;
-    const doneAt = parseTimestamp(doneAtValue);
+    // Eine frühe Rausgestellt-Markierung erledigt nicht die künftige Leerung.
+    if (phase !== 'reinstellen') return true;
+
+    const doneAt = parseTimestamp(eventItem.rein_done_at);
     if (doneAt) {
         const until = new Date(doneAt.getTime() + 10 * 60 * 1000);
         return now <= until;
@@ -125,12 +133,17 @@ function buildWasteRow(e, interactive) {
     if (isSchadstoff) rowClasses.push('waste-row-muted');
     if (interactive && !isSchadstoff) rowClasses.push('waste-clickable');
     const time = e.start ? `<span class="waste-time">${escapeHtml(e.start)}${e.end ? ' - ' + escapeHtml(e.end) : ''}</span>` : '';
-    const dataAttr = interactive && !isSchadstoff && e.id ? `data-event-id="${e.id}"` : '';
+    const dataAttr = interactive && !isSchadstoff && e.id ? `data-event-id="${escapeHtml(e.id)}"` : '';
+    const summary = isSchadstoff ? e.summary : getDisplaySummary(e.summary, phase);
+    const status = !isSchadstoff && phase === 'rausstellen' && (e.done_at || e.done_by)
+        ? '<span class="waste-status waste-status-done">Bereits rausgestellt</span>'
+        : '';
     return `
         <div class="${rowClasses.join(' ')}" ${dataAttr}>
             <span class="waste-date">${escapeHtml(getDisplayLabel(e.date, phase))}</span>
-            <span class="waste-type">${escapeHtml(getDisplaySummary(e.summary, phase))}</span>
+            <span class="waste-type">${escapeHtml(summary)}</span>
             ${time}
+            ${status}
         </div>
     `;
 }
@@ -231,11 +244,12 @@ function renderCombined() {
     const sonstigeInteractive = window.hausordnungSonstigeInteractive === true;
     const termineSection = buildTermineSection(wasteEventsCache, sonstigeEntries, wasteInteractive, sonstigeInteractive);
     const tasksSection = getTasksSection();
-    if (!termineSection.html) {
-        termineDiv.innerHTML = tasksSection.html;
-    } else {
-        termineDiv.innerHTML = `${termineSection.html}${tasksSection.html}`;
+    let termineHtml = termineSection.html;
+    if (wasteLoadError) {
+        if (!termineHtml) termineHtml = '<div class="waste-title">Termine</div>';
+        termineHtml += '<div class="waste-row" role="status">Die Abfalltermine konnten gerade nicht aktualisiert werden.</div>';
     }
+    termineDiv.innerHTML = `${termineHtml}${tasksSection.html}`;
     if (termineSection.bind) termineSection.bind();
     if (tasksSection.bind) tasksSection.bind();
 }
@@ -442,28 +456,35 @@ function bindWasteRowHandlers() {
 
 function fetchWaste() {
     fetch('abfall_api.php')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) throw new Error('Waste events unavailable');
+            return response.json();
+        })
         .then(data => {
             if (!data || !Array.isArray(data.events)) {
                 throw new Error('Invalid abfall_api response');
             }
             wasteEventsCache = data.events;
             wasteInteractive = true;
+            wasteLoadError = false;
             renderCombined();
         })
         .catch(() => {
             fetch('enso.php')
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) throw new Error('Waste fallback unavailable');
+                    return response.json();
+                })
                 .then(data => {
+                    if (!Array.isArray(data)) throw new Error('Invalid waste fallback response');
                     wasteEventsCache = data;
                     wasteInteractive = false;
+                    wasteLoadError = false;
                     renderCombined();
                 })
                 .catch(error => {
-                    const target = document.getElementById('termine');
-                    if (target) {
-                        target.textContent = 'Fehler beim Laden der Termine';
-                    }
+                    wasteLoadError = true;
+                    renderCombined();
                     console.error('Fehler beim Laden des Abfallkalenders:', error);
                 });
         });

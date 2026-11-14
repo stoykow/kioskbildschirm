@@ -31,6 +31,9 @@ jobs:
       - name: Sichtbarkeit der Tonnen und Aufgaben prüfen
         run: node tests/abfall_ui_test.cjs
 
+      - name: Privaten Zugang und öffentliche API-Antworten prüfen
+        run: docker run --rm hausordnung-kiosk php /var/www/html/tests/privacy_test.php
+
       - name: Upload-Paket vorbereiten
         run: |
           mkdir -p upload/htdocs upload/database/init upload/database/migrations

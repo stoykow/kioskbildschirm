@@ -98,6 +98,7 @@ function shouldShowTask(task) {
 }
 
 function buildTasksSection(entries, interactive) {
+    if (!window.kioskIsPrivate()) return { html: '', bind: null };
     const title = '<div class="task-title">Aufgaben</div>';
     const warning = taskLoadError ? '<div class="task-row">Die Aufgaben konnten gerade nicht aktualisiert werden.</div>' : '';
     if (!Array.isArray(entries) || entries.length === 0) {
@@ -161,12 +162,17 @@ function renderAll() {
 }
 
 function fetchTaskUsers() {
+    if (!window.kioskIsPrivate()) return Promise.reject(new Error('Private access required'));
     if (taskUsersCache) {
         return Promise.resolve(taskUsersCache);
     }
-    return fetch('abfall_users.php')
-        .then(response => response.json())
+    return window.kioskFetch('abfall_users.php')
+        .then(response => {
+            if (!response.ok) throw new Error('Users unavailable');
+            return response.json();
+        })
         .then(data => {
+            if (!window.kioskIsPrivate()) throw new Error('Private access required');
             if (!data || !Array.isArray(data.users)) {
                 throw new Error('Invalid users response');
             }
@@ -220,6 +226,7 @@ function ensureTaskModal() {
 }
 
 function openTaskModal(taskId) {
+    if (!window.kioskIsPrivate()) return;
     const taskItem = tasksCache.find(t => t.id === taskId);
     if (!taskItem) return;
 
@@ -247,6 +254,7 @@ function openTaskModal(taskId) {
 
     fetchTaskUsers()
         .then(users => {
+            if (!window.kioskIsPrivate()) return;
             if (!Array.isArray(users) || users.length === 0) {
                 list.innerHTML = '<div class="task-loading">Keine Benutzer vorhanden</div>';
                 return;
@@ -277,13 +285,15 @@ function closeTaskModal() {
 }
 
 function markTaskDone(taskId, userIds) {
-    fetch('aufgaben_done.php', {
+    if (!window.kioskIsPrivate()) return;
+    window.kioskFetch('aufgaben_done.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ task_id: taskId, user_ids: userIds })
     })
         .then(response => response.json())
         .then(data => {
+            if (!window.kioskIsPrivate()) return;
             if (!data || !data.ok) {
                 throw new Error('Mark task done failed');
             }
@@ -304,13 +314,15 @@ function markTaskDone(taskId, userIds) {
 }
 
 function markTaskUndone(taskId) {
-    fetch('aufgaben_done.php', {
+    if (!window.kioskIsPrivate()) return;
+    window.kioskFetch('aufgaben_done.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ task_id: taskId, undone: true })
     })
         .then(response => response.json())
         .then(data => {
+            if (!window.kioskIsPrivate()) return;
             if (!data || !data.ok) {
                 throw new Error('Mark task undone failed');
             }
@@ -329,6 +341,7 @@ function markTaskUndone(taskId) {
 }
 
 function bindTaskRowHandlers() {
+    if (!window.kioskIsPrivate()) return;
     const rows = document.querySelectorAll('.task-row[data-task-id]');
     rows.forEach(row => {
         row.addEventListener('click', () => {
@@ -341,12 +354,17 @@ function bindTaskRowHandlers() {
 }
 
 function fetchTasks() {
-    fetch('aufgaben_api.php')
+    if (!window.kioskIsPrivate()) {
+        clearPrivateTasks();
+        return;
+    }
+    window.kioskFetch('aufgaben_api.php')
         .then(response => {
             if (!response.ok) throw new Error('Tasks unavailable');
             return response.json();
         })
         .then(data => {
+            if (!window.kioskIsPrivate()) return;
             if (!data || !Array.isArray(data.tasks)) {
                 throw new Error('Invalid aufgaben_api response');
             }
@@ -355,11 +373,23 @@ function fetchTasks() {
             renderAll();
         })
         .catch(() => {
+            if (!window.kioskIsPrivate()) return;
             taskLoadError = true;
             renderAll();
         });
 }
 
+function clearPrivateTasks() {
+    tasksCache = [];
+    taskUsersCache = null;
+    taskLoadError = false;
+    const modal = document.getElementById('task-modal');
+    if (modal) modal.remove();
+    taskModalReady = false;
+    renderAll();
+}
+
+window.kioskRegisterPrivateCleanup(clearPrivateTasks);
 window.fetchTasks = fetchTasks;
 window.hausordnungTasks = {
     buildSection: () => buildTasksSection(tasksCache, true),

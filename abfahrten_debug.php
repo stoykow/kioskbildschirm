@@ -6,6 +6,8 @@ date_default_timezone_set('Europe/Berlin');
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/auth.php';
+kiosk_require_private_api();
 
 try {
     $pdo = db_connect();

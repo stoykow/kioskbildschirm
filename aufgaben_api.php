@@ -5,6 +5,8 @@ header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/auth.php';
+kiosk_require_private_api();
 require_once __DIR__ . '/reinigungsplan_aufgaben.php';
 
 try {

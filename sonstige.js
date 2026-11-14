@@ -43,6 +43,7 @@ function sonstigeGetLabel(dateStr) {
 }
 
 function buildSonstigeSection(entries, interactive) {
+    interactive = interactive && window.kioskIsPrivate();
     if (!Array.isArray(entries) || entries.length === 0) {
         return {
             html: '',
@@ -65,7 +66,7 @@ function buildSonstigeSection(entries, interactive) {
             const dataAttr = interactive && e.id ? `data-termin-id="${e.id}"` : '';
             const time = e.start ? `<span class="sonstige-time">${sonstigeEscapeHtml(e.start)}${e.end ? ' - ' + sonstigeEscapeHtml(e.end) : ''}</span>` : '';
             const hint = e.hint ? `<span class="sonstige-hint">${sonstigeEscapeHtml(e.hint)}</span>` : '';
-            const needsHome = !!e.requires_home;
+            const needsHome = window.kioskIsPrivate() && !!e.requires_home;
             const hasHome = e.zuhause_by && String(e.zuhause_by).trim() !== '';
             const showStatus = needsHome;
             const statusClass = hasHome ? 'sonstige-status' : 'sonstige-status sonstige-status-warn';
@@ -104,12 +105,17 @@ function renderSonstige() {
 }
 
 function fetchSonstigeUsers() {
+    if (!window.kioskIsPrivate()) return Promise.reject(new Error('Private access required'));
     if (sonstigeUsersCache) {
         return Promise.resolve(sonstigeUsersCache);
     }
-    return fetch('abfall_users.php')
-        .then(res => res.json())
+    return window.kioskFetch('abfall_users.php')
+        .then(res => {
+            if (!res.ok) throw new Error('Users unavailable');
+            return res.json();
+        })
         .then(data => {
+            if (!window.kioskIsPrivate()) throw new Error('Private access required');
             if (!data || !Array.isArray(data.users)) {
                 throw new Error('Invalid users response');
             }
@@ -158,6 +164,7 @@ function ensureSonstigeModal() {
 }
 
 function openSonstigeModal(terminId) {
+    if (!window.kioskIsPrivate()) return;
     const eventItem = sonstigeEventsCache.find(e => e.id === terminId);
     if (!eventItem) return;
     ensureSonstigeModal();
@@ -178,6 +185,7 @@ function openSonstigeModal(terminId) {
 
     fetchSonstigeUsers()
         .then(users => {
+            if (!window.kioskIsPrivate()) return;
             list.innerHTML = '';
             const selected = new Set((eventItem.zuhause_ids || []).map(id => Number(id)));
             users.forEach(user => {
@@ -209,13 +217,15 @@ function closeSonstigeModal() {
 }
 
 function setSonstigeZuhause(terminId, userIds, clear) {
-    fetch('termine_sonstige_zuhause.php', {
+    if (!window.kioskIsPrivate()) return;
+    window.kioskFetch('termine_sonstige_zuhause.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ termin_id: terminId, user_ids: userIds, clear: !!clear })
     })
         .then(res => res.json())
         .then(data => {
+            if (!window.kioskIsPrivate()) return;
             if (!data || data.error) {
                 throw new Error('Set zuhause failed');
             }
@@ -241,6 +251,7 @@ function setSonstigeZuhause(terminId, userIds, clear) {
 }
 
 function bindSonstigeRowHandlers() {
+    if (!window.kioskIsPrivate()) return;
     const rows = document.querySelectorAll('.sonstige-row[data-termin-id]');
     rows.forEach(row => {
         row.addEventListener('click', () => {
@@ -253,28 +264,48 @@ function bindSonstigeRowHandlers() {
 }
 
 function fetchSonstige() {
-    fetch('termine_sonstige_api.php')
-        .then(res => res.json())
+    window.kioskFetch('termine_sonstige_api.php')
+        .then(res => {
+            if (!res.ok) throw new Error('Appointments unavailable');
+            return res.json();
+        })
         .then(data => {
             if (!data || !Array.isArray(data.events)) {
                 throw new Error('Invalid termine_sonstige_api response');
             }
-            sonstigeEventsCache = data.events;
-            sonstigeInteractive = true;
+            sonstigeEventsCache = window.kioskIsPrivate() ? data.events : data.events.map(publicSonstigeEvent);
+            sonstigeInteractive = window.kioskIsPrivate();
             window.hausordnungSonstigeEvents = sonstigeEventsCache;
-            window.hausordnungSonstigeInteractive = true;
+            window.hausordnungSonstigeInteractive = sonstigeInteractive;
             if (typeof window.hausordnungRenderCombined === 'function') {
                 window.hausordnungRenderCombined();
             }
         })
         .catch(() => {
-            window.hausordnungSonstigeEvents = [];
-            window.hausordnungSonstigeInteractive = false;
+            if (!window.kioskIsPrivate()) sonstigeEventsCache = sonstigeEventsCache.map(publicSonstigeEvent);
+            window.hausordnungSonstigeEvents = sonstigeEventsCache;
+            window.hausordnungSonstigeInteractive = window.kioskIsPrivate() && sonstigeInteractive;
             if (typeof window.hausordnungRenderCombined === 'function') {
                 window.hausordnungRenderCombined();
             }
         });
 }
+
+function publicSonstigeEvent(event) {
+    return { id: event.id, date: event.date, title: event.title, start: event.start, end: event.end, hint: event.hint };
+}
+
+window.kioskRegisterPrivateCleanup(() => {
+    sonstigeEventsCache = sonstigeEventsCache.map(publicSonstigeEvent);
+    sonstigeUsersCache = null;
+    sonstigeInteractive = false;
+    window.hausordnungSonstigeEvents = sonstigeEventsCache;
+    window.hausordnungSonstigeInteractive = false;
+    const modal = document.getElementById('sonstige-modal');
+    if (modal) modal.remove();
+    sonstigeModalReady = false;
+    if (typeof window.hausordnungRenderCombined === 'function') window.hausordnungRenderCombined();
+});
 
 window.hausordnungSonstige = {
     fetch: fetchSonstige

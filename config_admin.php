@@ -1,8 +1,10 @@
 <?php
-// Simple config admin (no auth)
+// Simple config admin (geschÃ¼tzter Bereich)
 
 header('Content-Type: text/html; charset=utf-8');
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/auth.php';
+kiosk_require_private_page();
 
 try {
     $pdo = db_connect();
@@ -77,6 +79,7 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
     <p class="note">Secrets wie <strong>OPENWEATHER_API</strong> bleiben in der ENV. Alles andere hier pflegen.</p>
 
     <form method="post">
+            <input type="hidden" name="_kiosk_csrf" value="<?php echo htmlspecialchars(kiosk_csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
         <input type="hidden" name="action" value="save">
         <div class="row">
             <input type="text" name="config_key" placeholder="config_key (z.B. termine_sonstige_days)" required>
@@ -85,7 +88,7 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
         </div>
     </form>
 
-    <h2>Aktuelle Einträge</h2>
+    <h2>Aktuelle EintrÃ¤ge</h2>
     <table>
         <thead>
             <tr>
@@ -96,7 +99,7 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
         </thead>
         <tbody>
             <?php if (count($rows) === 0): ?>
-                <tr><td colspan="3">Keine Einträge</td></tr>
+                <tr><td colspan="3">Keine EintrÃ¤ge</td></tr>
             <?php else: ?>
                 <?php foreach ($rows as $row): ?>
                     <tr>
@@ -104,9 +107,10 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
                         <td><?php echo h($row['config_value']); ?></td>
                         <td>
                             <form method="post" style="display:inline;">
+            <input type="hidden" name="_kiosk_csrf" value="<?php echo htmlspecialchars(kiosk_csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="config_key" value="<?php echo h($row['config_key']); ?>">
-                                <button type="submit" class="danger">Löschen</button>
+                                <button type="submit" class="danger">LÃ¶schen</button>
                             </form>
                         </td>
                     </tr>

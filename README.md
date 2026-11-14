@@ -152,12 +152,65 @@ Alles andere per `app_config` (DB):
 - `termine_sonstige_days`, `termine_abfall_days`
 - `snow_task_lead_hours`, `snow_task_min_mm`, `snow_task_evening_hour`
 
-Admin-Seite: `admin.php` (ohne Login)
+Admin-Seite: `admin.php` (privater Zugang erforderlich)
 
 - Einträge in `app_config` anlegen/aktualisieren
 - Sonstige Termine anlegen/bearbeiten/löschen
 - Löschen räumt `termine_sonstige_zuhause` auf
 - Link zur Verwaltung der Reinigungspläne
+
+## Öffentliche und private Ansicht
+
+Wetter und Umweltmesswerte, Abfahrten und allgemeine Termine bleiben öffentlich.
+Haustürstatus, Aufgaben, Bewohnernamen, Anwesenheitsmeldungen und die Verwaltung
+benötigen den privaten Zugang. Dieselben Regeln gelten für direkte API-Aufrufe.
+Öffentliche Sensordaten enthalten nur Temperatur, Feuchte, Druck und Dosisleistung;
+andere Home-Assistant-Entitäten und Attribute werden nicht ausgegeben.
+
+Der Zugang verwendet die Docker-Umgebungsvariable `KIOSK_TOKEN`. Der vorhandene
+`HO_TOKEN` bleibt ausschließlich für die Home-Assistant-Zulieferung zuständig.
+Ohne gesetzten `KIOSK_TOKEN` bleibt nur die öffentliche Ansicht erreichbar.
+
+Im Portainer-Stack unter `app.environment` muss die Variable eingebunden sein:
+
+```yaml
+KIOSK_TOKEN: ${KIOSK_TOKEN:-}
+KIOSK_COOKIE_SECURE: ${KIOSK_COOKIE_SECURE:-1}
+```
+
+Den tatsächlichen Wert in den Stack-Umgebungsvariablen setzen und den Stack
+aktualisieren, damit der App-Container den Wert erhält. Nur eine CI/CD-Variable
+anzulegen reicht beim bestehenden FTP-Deployment nicht: Der Job kopiert Webdateien,
+ändert aber keine Container-Umgebung. Das Geheimnis gehört weder ins Repository
+noch in den Webordner. Ein langer zufälliger, URL-tauglicher Wert ist geeignet.
+
+Der gewünschte Einstieg ist:
+
+```text
+https://hausordnung.nik0.de/?TOKEN=DEIN_TOKEN
+```
+
+Bei Sonderzeichen muss der Wert URL-kodiert werden. Der Server prüft ihn einmal,
+entfernt den Queryparameter durch eine Weiterleitung und verwendet anschließend
+ein HttpOnly-Cookie mit Secure und SameSite=Strict. Die Sitzung gilt höchstens
+30 Tage. Ein Tokenwechsel im Container macht bestehende Sitzungen beim nächsten
+Aufruf ungültig. Alternativ kann der Zugangscode in `zugang.php` eingegeben werden.
+API-Clients können `Authorization: Bearer DEIN_TOKEN` verwenden. Private APIs
+akzeptieren den Queryparameter selbst nicht.
+
+Der erste Aufruf mit `?TOKEN=...` kann im Zugriffslog eines vorgeschalteten Proxys
+stehen. Solche Logs müssen Queryparameter ausblenden oder `TOKEN` redigieren,
+wenn auch dort kein Geheimnis gespeichert werden soll. PHP gibt den Token weder
+im HTML noch in Weiterleitungszielen aus. Für lokale HTTP-Tests darf ausschließlich
+`KIOSK_COOKIE_SECURE=0` verwendet werden; produktiv bleibt das Cookie Secure.
+
+Private Änderungen erfordern bei Cookie-Anmeldung zusätzlich CSRF. Nach Ablauf
+der Sitzung werden private Anzeigen und Browser-Caches entfernt. Der private
+Zugang lässt sich über „Abmelden“ beenden. Allgemeine Termine bleiben sichtbar,
+enthalten öffentlich aber keine Erlediger, Anwesenheitsnamen oder privaten Statusfelder.
+
+Die Zugriffskontrolle wird mit `php tests/privacy_test.php` und
+`node tests/abfall_ui_test.cjs` geprüft.
 
 ## Reinigungsrhythmus einrichten
 

@@ -27,6 +27,8 @@ function createBrowser(options = {}) {
         events: structuredClone(options.events || liveEvents),
         fallbackEvents: [], tasks: [], apiFailure: false, fallbackFailure: false,
         invalidFallback: false, requests: [],
+        requestOptions: [], tasksUnauthorized: false,
+        sonstige: [{ id: 8, date: '2026-11-15', title: 'Heizungswartung', requires_home: true, zuhause_by: 'PRIVAT-ZUHAUSE', zuhause_ids: [77] }],
     };
     class BrowserDate extends NativeDate {
         constructor(...args) { super(...(args.length ? args : [state.now])); }
@@ -39,8 +41,9 @@ function createBrowser(options = {}) {
         set textContent(value) { this.text = value; this.html = ''; },
         get textContent() { return this.text; },
     };
+    const weatherTarget = { innerHTML: '', textContent: '' };
     const document = {
-        getElementById: id => id === 'termine' ? target : null,
+        getElementById: id => id === 'termine' ? target : (id === 'weather' ? weatherTarget : null),
         querySelectorAll: () => [],
         createElement: () => ({
             value: '',
@@ -52,13 +55,27 @@ function createBrowser(options = {}) {
     };
     const sandbox = {
         Date: BrowserDate, document, console: { error() {} },
-        fetch: async url => {
+        kioskAccess: options.private === false ? undefined : { private: true, csrf: 'fixture-csrf' },
+        fetch: async (url, requestOptions = {}) => {
             state.requests.push(url);
+            state.requestOptions.push(requestOptions);
             if (url === 'aufgaben_api.php') {
-                return { ok: true, json: async () => ({ tasks: structuredClone(state.tasks) }) };
+                return { ok: !state.tasksUnauthorized, status: state.tasksUnauthorized ? 401 : 200, json: async () => ({ tasks: structuredClone(state.tasks) }) };
             }
             if (url === 'abfall_api.php') {
                 return { ok: !state.apiFailure, json: async () => ({ events: structuredClone(state.events) }) };
+            }
+            if (url === 'termine_sonstige_api.php') {
+                return { ok: true, status: 200, json: async () => ({ events: structuredClone(state.sonstige) }) };
+            }
+            if (url.startsWith('geraet_status.php?')) {
+                return { ok: true, status: 200, json: async () => [{ payload: {
+                    'sensor.geiger_temperatur': { state: '21.3', attributes: { unit_of_measurement: '°C' } },
+                    'sensor.geiger_luftfeuchte': { state: '53', attributes: { unit_of_measurement: '%' } },
+                    'sensor.geiger_luftdruck': { state: '1013', attributes: { unit_of_measurement: 'hPa' } },
+                    'sensor.multigeiger_geiger_dosisleistung': { state: '0.12', attributes: { unit_of_measurement: 'µSv/h' } },
+                    'lock.haustur': { state: 'unlocked' },
+                } }] };
             }
             assert.equal(url, 'enso.php');
             return {
@@ -69,15 +86,17 @@ function createBrowser(options = {}) {
     };
     sandbox.window = sandbox;
     vm.createContext(sandbox);
-    for (const filename of ['abfall.js', 'sonstige.js', 'aufgaben.js']) {
+    for (const filename of ['kiosk.js', 'wetter.js', 'abfall.js', 'sonstige.js', 'aufgaben.js']) {
         vm.runInContext(fs.readFileSync(path.join(sourceDirectory, filename), 'utf8'), sandbox, { filename });
     }
     const settle = async () => { await new Promise(setImmediate); await new Promise(setImmediate); };
     return {
-        state, sandbox, target,
+        state, sandbox, target, weatherTarget,
         html: () => target.innerHTML,
         async fetchWaste() { sandbox.fetchWaste(); await settle(); },
         async fetchTasks(tasks) { state.tasks = tasks; sandbox.fetchTasks(); await settle(); },
+        async fetchSonstige() { sandbox.fetchSonstige(); await settle(); },
+        async fetchWeather() { await sandbox.fetchWeather(); await settle(); },
         setTime(value) { state.now = NativeDate.parse(value); sandbox.hausordnungRenderCombined(); },
     };
 }
@@ -258,6 +277,56 @@ test('Termintexte, Zeitangaben und Datenattribute können kein HTML einschleusen
     assert.match(browser.html(), /&lt;img/);
     assert.match(browser.html(), /data-event-id="5&quot; onclick=&quot;/);
     assert.equal(statusCount(browser.html()), 1);
+});
+
+test('Ohne privaten Bootstrap bleiben Aufgaben und Türabruf vollständig aus', async () => {
+    const browser = createBrowser({ private: false });
+    await browser.fetchWaste();
+    await browser.fetchTasks([openTask]);
+    await browser.fetchWeather();
+    assert.equal(browser.sandbox.kioskIsPrivate(), false);
+    assert.doesNotMatch(browser.html(), /data-task-id|data-event-id|waste-clickable|Bereits rausgestellt/);
+    assert.match(browser.html(), /Restmüll/);
+    assert.equal(browser.state.requests.includes('aufgaben_api.php'), false);
+    assert.equal(browser.state.requests.some(url => url.includes('nukihub5')), false);
+    assert.doesNotMatch(browser.weatherTarget.innerHTML, /Haustür|aufgeschlossen/);
+    assert.match(browser.weatherTarget.innerHTML, /21.3/);
+});
+
+test('Öffentliche Termin-Callbacks bereinigen auch versehentlich private Antwortfelder', async () => {
+    const browser = createBrowser({ private: false });
+    await browser.fetchWaste();
+    await browser.fetchSonstige();
+    assert.doesNotMatch(JSON.stringify(browser.sandbox.hausordnungSonstigeEvents), /PRIVAT-ZUHAUSE|zuhause_|requires_home/);
+    assert.doesNotMatch(browser.html(), /David|Daniel|PRIVAT-ZUHAUSE|Bereits rausgestellt/);
+});
+
+test('401 entfernt private Aufgaben, Türstatus und zwischengespeicherte Anwesenheit sofort', async () => {
+    const browser = createBrowser();
+    await browser.fetchWaste();
+    await browser.fetchSonstige();
+    await browser.fetchTasks([openTask]);
+    await browser.fetchWeather();
+    assert.match(browser.html(), /data-task-id="91"/);
+    assert.match(browser.weatherTarget.innerHTML, /Haustür/);
+    browser.state.tasksUnauthorized = true;
+    await browser.fetchTasks([openTask]);
+    assert.equal(browser.sandbox.kioskIsPrivate(), false);
+    assert.doesNotMatch(browser.html(), /data-task-id|waste-clickable|Bereits rausgestellt|PRIVAT-ZUHAUSE/);
+    assert.doesNotMatch(browser.weatherTarget.innerHTML, /Haustür|aufgeschlossen/);
+    assert.doesNotMatch(JSON.stringify(browser.sandbox.hausordnungSonstigeEvents), /zuhause_|requires_home/);
+    assert.match(browser.html(), /Restmüll/);
+});
+
+test('Nur private Mutationen senden CSRF und öffentliche Mutationen erreichen fetch nicht', async () => {
+    const privateBrowser = createBrowser();
+    await privateBrowser.sandbox.kioskFetch('abfall_api.php', { method: 'POST' });
+    assert.equal(privateBrowser.state.requestOptions[0].headers['X-CSRF-Token'], 'fixture-csrf');
+    await privateBrowser.sandbox.kioskFetch('abfall_api.php');
+    assert.equal(privateBrowser.state.requestOptions[1].headers['X-CSRF-Token'], undefined);
+    const publicBrowser = createBrowser({ private: false });
+    await assert.rejects(publicBrowser.sandbox.kioskFetch('abfall_api.php', { method: 'POST' }));
+    assert.equal(publicBrowser.state.requests.length, 0);
 });
 
 (async () => {

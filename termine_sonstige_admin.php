@@ -1,8 +1,10 @@
 <?php
-// Admin: Sonstige Termine verwalten (ohne Login)
+// Admin: Sonstige Termine verwalten (geschützter Bereich)
 
 header('Content-Type: text/html; charset=utf-8');
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/auth.php';
+kiosk_require_private_page();
 
 try {
     $pdo = db_connect();
@@ -110,9 +112,10 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 </head>
 <body>
     <h1>Sonstige Termine</h1>
-    <p class="note">Ohne Login. �nderungen wirken sofort.</p>
+    <p class="note">Geschützter Bereich. Änderungen wirken sofort.</p>
 
     <form method="post">
+            <input type="hidden" name="_kiosk_csrf" value="<?php echo htmlspecialchars(kiosk_csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
         <input type="hidden" name="action" value="save">
         <input type="hidden" name="id" value="<?php echo h($editRow['id'] ?? ''); ?>">
         <div class="row">
@@ -175,9 +178,10 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
                         <td>
                             <a href="?edit=<?php echo h($row['id']); ?>">Bearbeiten</a>
                             <form method="post" style="display:inline;">
+            <input type="hidden" name="_kiosk_csrf" value="<?php echo htmlspecialchars(kiosk_csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="id" value="<?php echo h($row['id']); ?>">
-                                <button type="submit" class="danger">L�schen</button>
+                                <button type="submit" class="danger">Löschen</button>
                             </form>
                         </td>
                     </tr>

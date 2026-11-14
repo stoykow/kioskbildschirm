@@ -2,9 +2,15 @@
 // Reinigungsrhythmen und die Reihenfolge der Bewohnergruppen verwalten.
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/auth.php';
+kiosk_require_private_page();
 require_once __DIR__ . '/reinigungsplan.php';
 
-session_start();
+if (!kiosk_start_session()) {
+    http_response_code(503);
+    echo 'Der private Zugang ist gerade nicht verfügbar.';
+    exit;
+}
 header('Content-Type: text/html; charset=utf-8');
 header('Cache-Control: no-store');
 if (empty($_SESSION['reinigungsplan_csrf'])) {
@@ -276,6 +282,7 @@ $unitLabels = ['tage' => 'Tage', 'wochen' => 'Wochen', 'monate' => 'Monate'];
         <p class="note">Du kannst vorhandene Gruppen verwenden oder weitere Gruppen anlegen, zum Beispiel „Erdgeschoss“ oder „Familie Müller“.</p>
         <form method="post" action="reinigungsplan_admin.php<?php echo $editId > 0 ? '?edit_plan=' . $editId : ''; ?>">
             <input type="hidden" name="csrf" value="<?php echo reinigungsplan_admin_h($csrf); ?>">
+            <input type="hidden" name="_kiosk_csrf" value="<?php echo htmlspecialchars(kiosk_csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
             <input type="hidden" name="action" value="gruppe_anlegen">
             <div class="row">
                 <div class="field"><label for="gruppenname">Name der neuen Gruppe</label><input type="text" id="gruppenname" name="gruppenname" maxlength="64" required></div>
@@ -288,6 +295,7 @@ $unitLabels = ['tage' => 'Tage', 'wochen' => 'Wochen', 'monate' => 'Monate'];
     <div class="section">
         <form method="post" action="reinigungsplan_admin.php">
             <input type="hidden" name="csrf" value="<?php echo reinigungsplan_admin_h($csrf); ?>">
+            <input type="hidden" name="_kiosk_csrf" value="<?php echo htmlspecialchars(kiosk_csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
             <input type="hidden" name="action" value="plan_speichern">
             <input type="hidden" name="id" value="<?php echo reinigungsplan_admin_h($form['id']); ?>">
             <div class="row">
@@ -342,7 +350,8 @@ $unitLabels = ['tage' => 'Tage', 'wochen' => 'Wochen', 'monate' => 'Monate'];
             <div class="actions">
                 <a href="reinigungsplan_admin.php?edit_plan=<?php echo (int)$plan['id']; ?>">Bearbeiten</a>
                 <form method="post" action="reinigungsplan_admin.php">
-                    <input type="hidden" name="csrf" value="<?php echo reinigungsplan_admin_h($csrf); ?>"><input type="hidden" name="action" value="plan_aktivieren"><input type="hidden" name="id" value="<?php echo (int)$plan['id']; ?>"><input type="hidden" name="aktiv" value="<?php echo (int)$plan['aktiv'] ? '0' : '1'; ?>">
+                    <input type="hidden" name="csrf" value="<?php echo reinigungsplan_admin_h($csrf); ?>">
+            <input type="hidden" name="_kiosk_csrf" value="<?php echo htmlspecialchars(kiosk_csrf_token(), ENT_QUOTES, 'UTF-8'); ?>"><input type="hidden" name="action" value="plan_aktivieren"><input type="hidden" name="id" value="<?php echo (int)$plan['id']; ?>"><input type="hidden" name="aktiv" value="<?php echo (int)$plan['aktiv'] ? '0' : '1'; ?>">
                     <button type="submit"><?php echo (int)$plan['aktiv'] ? 'Pausieren' : 'Aktivieren'; ?></button>
                 </form>
             </div>

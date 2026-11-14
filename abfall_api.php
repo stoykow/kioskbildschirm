@@ -5,6 +5,10 @@ header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/public_data.php';
+kiosk_privacy_headers();
+$isPrivate = kiosk_is_private();
 
 try {
     $pdo = db_connect();
@@ -76,5 +80,8 @@ foreach ($stmt->fetchAll() as $row) {
     ];
 }
 
+if (!$isPrivate) {
+    $events = array_map('kiosk_public_waste_event', $events);
+}
 echo json_encode(['events' => $events], JSON_UNESCAPED_UNICODE);
 

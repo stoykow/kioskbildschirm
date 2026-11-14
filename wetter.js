@@ -1,18 +1,24 @@
 // wetter.js
 // Werte aus Home Assistant (via DB) anzeigen
 
-// Geraete-Namen wie in ha_ingest.php gespeichert
+// Geräte-Namen wie in ha_ingest.php gespeichert
 const GEIGER_GERAET = 'multigeiger';
 const TUER_GERAET = 'nukihub5';
 
-// Entitaeten (aus HA)
+// Entitäten (aus HA)
 const GEIGER_TEMPERATUR = 'sensor.geiger_temperatur';
 const GEIGER_LUFTFEUCHTE = 'sensor.geiger_luftfeuchte';
 const GEIGER_LUFTDRUCK = 'sensor.geiger_luftdruck';
 const GEIGER_DOSIS = 'sensor.multigeiger_geiger_dosisleistung';
 
-// Hier den richtigen Entitaetsnamen fuer die Haustuer eintragen
+// Entität der Haustür aus Home Assistant
 const TUER_STATUS = 'lock.haustur';
+let weatherGeigerCache = null;
+
+function weatherEscape(value) {
+    return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
 
 function sanitizeUnit(unit) {
     if (!unit) {
@@ -54,7 +60,9 @@ function updateStatusTime() {
 }
 
 async function fetchHaGeraet(geraet) {
-    const res = await fetch(`geraet_status.php?geraet=${encodeURIComponent(geraet)}&limit=1`);
+    if (geraet === TUER_GERAET && !window.kioskIsPrivate()) return null;
+    const res = await window.kioskFetch(`geraet_status.php?geraet=${encodeURIComponent(geraet)}&limit=1`);
+    if (!res.ok) throw new Error('Weather data unavailable');
     const data = await res.json();
     if (!Array.isArray(data) || data.length === 0) {
         return null;
@@ -89,11 +97,7 @@ function formatPressure(press) {
     return { value: press.value, unit: press.unit || 'hPa' };
 }
 
-async function fetchWeather() {
-    try {
-        const geiger = await fetchHaGeraet(GEIGER_GERAET);
-        const tuer = await fetchHaGeraet(TUER_GERAET);
-
+function renderWeather(geiger, tuer) {
         const temp = pickValue(geiger, GEIGER_TEMPERATUR);
         const hum = pickValue(geiger, GEIGER_LUFTFEUCHTE);
         const press = formatPressure(pickValue(geiger, GEIGER_LUFTDRUCK));
@@ -107,29 +111,55 @@ async function fetchWeather() {
         const pressText = press ? `${press.value} ${press.unit || 'hPa'}` : 'n.v.';
         const dosisText = dosis ? `${dosis.value} ${dosis.unit || 'uSv/h'}` : 'n.v.';
 
-        document.getElementById('weather').innerHTML =
+        const container = document.getElementById('weather');
+        if (!container) return;
+        const doorRow = window.kioskIsPrivate() ? `<div class="weather-row" id="weather-door-row">
+                <span class="weather-label">Haustür:</span>
+                <span class="weather-value weather-status ${tuerInfo.className}">${weatherEscape(tuerInfo.label)}</span>
+            </div>` : '';
+        container.innerHTML =
             `<div class="weather-title">Umwelt / Status</div>` +
             `<div class="weather-row">
                 <span class="weather-label">Datum/Uhrzeit:</span>
                 <span class="weather-value">
-                    <span id="weather-status-time" class="weather-status-time">${statusTime}</span>
+                    <span id="weather-status-time" class="weather-status-time">${weatherEscape(statusTime)}</span>
                 </span>
             </div>` +
             `<div class="weather-row">
                 <span class="weather-label">Temp / Feuchte:</span>
-                <span class="weather-value">${tempText} / ${humText}</span>
+                <span class="weather-value">${weatherEscape(tempText)} / ${weatherEscape(humText)}</span>
             </div>` +
             `<div class="weather-row">
                 <span class="weather-label">Druck / Dosis:</span>
-                <span class="weather-value">${pressText} / ${dosisText}</span>
+                <span class="weather-value">${weatherEscape(pressText)} / ${weatherEscape(dosisText)}</span>
             </div>` +
-            `<div class="weather-row">
-                <span class="weather-label">Haustür:</span>
-                <span class="weather-value weather-status ${tuerInfo.className}">${tuerInfo.label}</span>
-            </div>`;
+            doorRow;
         updateStatusTime();
+}
+
+async function fetchWeather() {
+    try {
+        const geiger = await fetchHaGeraet(GEIGER_GERAET);
+        // Nur die vier öffentlichen Messwerte im Browser zwischenspeichern.
+        weatherGeigerCache = {};
+        for (const id of [GEIGER_TEMPERATUR, GEIGER_LUFTFEUCHTE, GEIGER_LUFTDRUCK, GEIGER_DOSIS]) {
+            if (geiger && geiger[id]) {
+                weatherGeigerCache[id] = {
+                    state: geiger[id].state,
+                    attributes: { unit_of_measurement: geiger[id].attributes?.unit_of_measurement },
+                };
+            }
+        }
+        const tuer = window.kioskIsPrivate() ? await fetchHaGeraet(TUER_GERAET) : null;
+        renderWeather(weatherGeigerCache, tuer);
     } catch (error) {
-        document.getElementById('weather').textContent = 'Fehler beim Laden der HA-Daten';
+        if (weatherGeigerCache) renderWeather(weatherGeigerCache, null);
+        else {
+            const container = document.getElementById('weather');
+            if (container) container.textContent = 'Die Umweltdaten konnten gerade nicht geladen werden.';
+        }
         console.error('Fehler beim Laden der HA-Daten:', error);
     }
 }
+
+window.kioskRegisterPrivateCleanup(() => renderWeather(weatherGeigerCache, null));

@@ -35,6 +35,29 @@ body.hide-mouse * {
     cursor: none !important;
 }
 
+.kiosk-accessbar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.6rem;
+    width: min(96vw, 1800px);
+    padding: 0 clamp(0.8rem, 2vw, 2.5rem) 0.5rem;
+    font-size: 0.85rem;
+}
+
+.kiosk-accessbar form { margin: 0; }
+.kiosk-accessbar [hidden] { display: none; }
+.kiosk-accessbar a { color: var(--text-dim); }
+.kiosk-access-button {
+    padding: 0.25rem 0.6rem;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 0.4rem;
+    background: transparent;
+    color: var(--text-dim);
+    font: inherit;
+    cursor: pointer;
+}
+
 #links,
 #rechts {
     font-size: 1.1rem;

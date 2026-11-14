@@ -32,6 +32,7 @@ php-tests:
     - php tests/reinigungsplan_test.php
     - php tests/reinigungsplan_aufgaben_test.php
     - php tests/abfahrten_test.php
+    - php tests/privacy_test.php
 
 javascript-syntax:
   stage: test
@@ -191,12 +192,18 @@ deploy-production:
       cron_result="$(tr -d '\r\n' < "$check_dir/response")"
       printf '%s\n' "$cron_result" | grep -Eq '^(OK: [0-9]+ Abfahrten aktualisiert\.|Der letzte Abruf liegt weniger als eine Minute zurück\.|Eine Aktualisierung läuft bereits\.)$'
       echo 'OK: Abfahrten-Import'
-      for endpoint in abfall_api.php termine_sonstige_api.php aufgaben_api.php; do
+      for endpoint in abfall_api.php termine_sonstige_api.php; do
         key=events
-        test "$endpoint" != aufgaben_api.php || key=tasks
         fetch "$endpoint"
         jq -e --arg key "$key" 'type == "object" and (has("error") | not) and (.[$key] | type == "array")' "$check_dir/response" > /dev/null
         echo "OK: $endpoint"
+      done
+      for endpoint in aufgaben_api.php reinigungsplan_api.php abfall_users.php 'geraet_status.php?geraet=nukihub5'; do
+        status="$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
+          --output "$check_dir/response" --write-out '%{http_code}' "$app_url$endpoint")"
+        test "$status" = 401
+        jq -e 'type == "object" and has("error") and (has("tasks") | not) and (has("plans") | not) and (has("users") | not)' "$check_dir/response" > /dev/null
+        echo "OK: Privater Endpunkt geschützt: $endpoint"
       done
       for kind in zug ersatzverkehr tram bus; do
         fetch "abfahrten.php?typ=$kind"

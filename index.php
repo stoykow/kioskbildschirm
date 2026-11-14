@@ -1,9 +1,16 @@
 <?php
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/auth.php';
+kiosk_handle_entry_token();
 
-header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+$private = kiosk_is_private();
+$csrf = $private ? kiosk_csrf_token() : null;
+
+header("Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0");
 header("Pragma: no-cache");
 header("Expires: 0");
+header('Vary: Cookie, Authorization');
+header('Referrer-Policy: no-referrer');
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -11,10 +18,20 @@ header("Expires: 0");
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
     <title>Kiosk Display</title>
     <link rel="stylesheet" href="kiosk.css?v=<?php echo filemtime(__DIR__ . '/kiosk.css'); ?>">
 </head>
 <body class="<?php echo $showMouse ? '' : 'hide-mouse'; ?>">
+    <nav class="kiosk-accessbar" aria-label="Privater Zugang">
+        <a id="kiosk-login" href="zugang.php"<?php echo $private ? ' hidden' : ''; ?>>Privater Bereich</a>
+        <?php if ($private): ?>
+        <form id="kiosk-logout" method="post" action="zugang.php?logout=1">
+            <input type="hidden" name="_kiosk_csrf" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
+            <button class="kiosk-access-button" type="submit">Abmelden</button>
+        </form>
+        <?php endif; ?>
+    </nav>
     <div id="main-flex">
         <div id="links">
             <div id="weather">Lädt Wetterdaten...</div>
@@ -27,6 +44,10 @@ header("Expires: 0");
         </div>
     </div>
 
+    <script>
+        window.kioskAccess = <?php echo json_encode(['private' => $private, 'csrf' => $csrf], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+    </script>
+    <script src="kiosk.js?v=<?php echo time(); ?>"></script>
     <script src="wetter.js?v=<?php echo time(); ?>"></script>
     <script src="abfall.js?v=<?php echo time(); ?>"></script>
     <script src="sonstige.js?v=<?php echo time(); ?>"></script>
@@ -39,7 +60,6 @@ header("Expires: 0");
         ]); ?>;
     </script>
     <script src="abfahrten.js?v=<?php echo time(); ?>"></script>
-    <script src="kiosk.js?v=<?php echo time(); ?>"></script>
     
 
 </body>

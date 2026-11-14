@@ -79,6 +79,7 @@ function shouldShowWasteEvent(eventItem, phase, ignoreShowFrom) {
     today.setHours(0, 0, 0, 0);
     // Der ICS-Fallback kann auch vergangene Termine enthalten.
     if (!eventDate || eventDate < today) return false;
+    if (!window.kioskIsPrivate()) return true;
     if (!ignoreShowFrom) {
         const showFrom = getShowFrom(eventItem.date);
         if (showFrom && now < showFrom) return false;
@@ -96,6 +97,7 @@ function shouldShowWasteEvent(eventItem, phase, ignoreShowFrom) {
 }
 
 function getWastePhase(dateStr) {
+    if (!window.kioskIsPrivate()) return 'rausstellen';
     const target = parseDateLocal(dateStr);
     if (!target) return 'rausstellen';
     const now = new Date();
@@ -127,6 +129,7 @@ function getDisplaySummary(summary, phase) {
 }
 
 function buildWasteRow(e, interactive) {
+    interactive = interactive && window.kioskIsPrivate();
     const isSchadstoff = String(e.summary || '').toLowerCase().startsWith('schadstoffmobil');
     const phase = getWastePhase(e.date);
     const rowClasses = ['waste-row'];
@@ -135,7 +138,7 @@ function buildWasteRow(e, interactive) {
     const time = e.start ? `<span class="waste-time">${escapeHtml(e.start)}${e.end ? ' - ' + escapeHtml(e.end) : ''}</span>` : '';
     const dataAttr = interactive && !isSchadstoff && e.id ? `data-event-id="${escapeHtml(e.id)}"` : '';
     const summary = isSchadstoff ? e.summary : getDisplaySummary(e.summary, phase);
-    const status = !isSchadstoff && phase === 'rausstellen' && (e.done_at || e.done_by)
+    const status = window.kioskIsPrivate() && !isSchadstoff && phase === 'rausstellen' && (e.done_at || e.done_by)
         ? '<span class="waste-status waste-status-done">Bereits rausgestellt</span>'
         : '';
     return `
@@ -149,12 +152,13 @@ function buildWasteRow(e, interactive) {
 }
 
 function buildSonstigeRow(e, interactive) {
+    interactive = interactive && window.kioskIsPrivate();
     const rowClasses = ['sonstige-row'];
     if (interactive) rowClasses.push('sonstige-clickable');
     const dataAttr = interactive && e.id ? `data-termin-id="${e.id}"` : '';
     const time = e.start ? `<span class="sonstige-time">${escapeHtml(e.start)}${e.end ? ' - ' + escapeHtml(e.end) : ''}</span>` : '';
     const hint = e.hint ? `<span class="sonstige-hint">${escapeHtml(e.hint)}</span>` : '';
-    const needsHome = !!e.requires_home;
+    const needsHome = window.kioskIsPrivate() && !!e.requires_home;
     const hasHome = e.zuhause_by && String(e.zuhause_by).trim() !== '';
     const showStatus = needsHome;
     const statusClass = hasHome ? 'sonstige-status' : 'sonstige-status sonstige-status-warn';
@@ -257,12 +261,17 @@ function renderCombined() {
 window.hausordnungRenderCombined = renderCombined;
 
 function fetchWasteUsers() {
+    if (!window.kioskIsPrivate()) return Promise.reject(new Error('Private access required'));
     if (wasteUsersCache) {
         return Promise.resolve(wasteUsersCache);
     }
-    return fetch('abfall_users.php')
-        .then(response => response.json())
+    return window.kioskFetch('abfall_users.php')
+        .then(response => {
+            if (!response.ok) throw new Error('Users unavailable');
+            return response.json();
+        })
         .then(data => {
+            if (!window.kioskIsPrivate()) throw new Error('Private access required');
             if (!data || !Array.isArray(data.users)) {
                 throw new Error('Invalid users response');
             }
@@ -315,6 +324,7 @@ function ensureWasteModal() {
 }
 
 function openWasteModal(eventId) {
+    if (!window.kioskIsPrivate()) return;
     const eventItem = wasteEventsCache.find(e => e.id == eventId);
     if (!eventItem) return;
 
@@ -343,6 +353,7 @@ function openWasteModal(eventId) {
 
     fetchWasteUsers()
         .then(users => {
+            if (!window.kioskIsPrivate()) return;
             if (!Array.isArray(users) || users.length == 0) {
                 list.innerHTML = '<div class="waste-loading">Keine Benutzer vorhanden</div>';
                 return;
@@ -379,15 +390,17 @@ function closeWasteModal() {
 }
 
 function markWasteDone(eventId, userIds) {
+    if (!window.kioskIsPrivate()) return;
     const modal = document.getElementById('waste-modal');
     const action = modal ? (modal.getAttribute('data-action') || 'rausstellen') : 'rausstellen';
-    fetch('abfall_done.php', {
+    window.kioskFetch('abfall_done.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ event_id: eventId, user_ids: userIds, action })
     })
         .then(response => response.json())
         .then(data => {
+            if (!window.kioskIsPrivate()) return;
             if (!data || !data.ok) {
                 throw new Error('Mark done failed');
             }
@@ -413,15 +426,17 @@ function markWasteDone(eventId, userIds) {
 }
 
 function markWasteUndone(eventId) {
+    if (!window.kioskIsPrivate()) return;
     const modal = document.getElementById('waste-modal');
     const action = modal ? (modal.getAttribute('data-action') || 'rausstellen') : 'rausstellen';
-    fetch('abfall_done.php', {
+    window.kioskFetch('abfall_done.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ event_id: eventId, undone: true, action })
     })
         .then(response => response.json())
         .then(data => {
+            if (!window.kioskIsPrivate()) return;
             if (!data || !data.ok) {
                 throw new Error('Mark undone failed');
             }
@@ -443,6 +458,7 @@ function markWasteUndone(eventId) {
 }
 
 function bindWasteRowHandlers() {
+    if (!window.kioskIsPrivate()) return;
     const rows = document.querySelectorAll('.waste-row[data-event-id]');
     rows.forEach(row => {
         row.addEventListener('click', () => {
@@ -455,7 +471,7 @@ function bindWasteRowHandlers() {
 }
 
 function fetchWaste() {
-    fetch('abfall_api.php')
+    window.kioskFetch('abfall_api.php')
         .then(response => {
             if (!response.ok) throw new Error('Waste events unavailable');
             return response.json();
@@ -464,20 +480,20 @@ function fetchWaste() {
             if (!data || !Array.isArray(data.events)) {
                 throw new Error('Invalid abfall_api response');
             }
-            wasteEventsCache = data.events;
-            wasteInteractive = true;
+            wasteEventsCache = window.kioskIsPrivate() ? data.events : data.events.map(publicWasteEvent);
+            wasteInteractive = window.kioskIsPrivate();
             wasteLoadError = false;
             renderCombined();
         })
         .catch(() => {
-            fetch('enso.php')
+            window.kioskFetch('enso.php')
                 .then(response => {
                     if (!response.ok) throw new Error('Waste fallback unavailable');
                     return response.json();
                 })
                 .then(data => {
                     if (!Array.isArray(data)) throw new Error('Invalid waste fallback response');
-                    wasteEventsCache = data;
+                    wasteEventsCache = window.kioskIsPrivate() ? data : data.map(publicWasteEvent);
                     wasteInteractive = false;
                     wasteLoadError = false;
                     renderCombined();
@@ -489,3 +505,17 @@ function fetchWaste() {
                 });
         });
 }
+
+function publicWasteEvent(event) {
+    return { id: event.id, date: event.date, summary: event.summary, start: event.start, end: event.end };
+}
+
+window.kioskRegisterPrivateCleanup(() => {
+    wasteEventsCache = wasteEventsCache.map(publicWasteEvent);
+    wasteUsersCache = null;
+    wasteInteractive = false;
+    const modal = document.getElementById('waste-modal');
+    if (modal) modal.remove();
+    wasteModalReady = false;
+    renderCombined();
+});

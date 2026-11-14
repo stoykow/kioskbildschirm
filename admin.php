@@ -1,8 +1,10 @@
 <?php
-// Zentral-Admin (ohne Login)
+// Zentral-Admin (geschützter Bereich)
 
 header('Content-Type: text/html; charset=utf-8');
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/auth.php';
+kiosk_require_private_page();
 
 try {
     $pdo = db_connect();
@@ -140,11 +142,12 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 <body>
     <h1>Admin</h1>
     <p><a href="reinigungsplan_admin.php">Reinigungsrhythmus und Bewohnergruppen verwalten</a></p>
-    <p class="note">Ohne Login. Änderungen wirken sofort. Secrets wie <strong>OPENWEATHER_API</strong> bleiben in der ENV.</p>
+    <p class="note">Geschützter Bereich. Änderungen wirken sofort. Secrets wie <strong>OPENWEATHER_API</strong> bleiben in der ENV.</p>
 
     <h2>Einstellungen (app_config)</h2>
     <div class="section">
         <form method="post">
+            <input type="hidden" name="_kiosk_csrf" value="<?php echo htmlspecialchars(kiosk_csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
             <input type="hidden" name="action" value="config_save">
             <div class="row">
                 <div class="field">
@@ -176,6 +179,7 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
                             <td><?php echo h($row['config_key']); ?></td>
                             <td>
                                 <form method="post" style="display:flex; gap:8px; align-items:center;">
+            <input type="hidden" name="_kiosk_csrf" value="<?php echo htmlspecialchars(kiosk_csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
                                     <input type="hidden" name="action" value="config_save">
                                     <input type="hidden" name="config_key" value="<?php echo h($row['config_key']); ?>">
                                     <input type="text" name="config_value" value="<?php echo h($row['config_value']); ?>" style="min-width:180px;">
@@ -210,6 +214,7 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
     <h2>Termine</h2>
     <div class="section">
         <form method="post">
+            <input type="hidden" name="_kiosk_csrf" value="<?php echo htmlspecialchars(kiosk_csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
             <input type="hidden" name="action" value="termin_save">
             <input type="hidden" name="id" value="<?php echo h($editRow['id'] ?? ''); ?>">
             <div class="row">
@@ -272,6 +277,7 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
                             <td>
                                 <a href="?edit=<?php echo h($row['id']); ?>">Bearbeiten</a>
                                 <form method="post" style="display:inline;">
+            <input type="hidden" name="_kiosk_csrf" value="<?php echo htmlspecialchars(kiosk_csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
                                     <input type="hidden" name="action" value="termin_delete">
                                     <input type="hidden" name="id" value="<?php echo h($row['id']); ?>">
                                     <button type="submit" class="danger">Löschen</button>

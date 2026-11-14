@@ -4,8 +4,15 @@
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/public_data.php';
+kiosk_privacy_headers();
 
-$geraetName = $_GET['geraet'] ?? '';
+$geraetName = is_string($_GET['geraet'] ?? null) ? $_GET['geraet'] : '';
+$isPrivate = kiosk_is_private();
+if ($geraetName !== 'multigeiger') {
+    kiosk_require_private_api();
+}
 $limit = (int)($_GET['limit'] ?? 1);
 if ($limit < 1 || $limit > 50) {
     $limit = 1;
@@ -45,6 +52,13 @@ $rows = $stmt->fetchAll();
 foreach ($rows as &$row) {
     $row['payload'] = json_decode($row['payload_json'], true);
     unset($row['payload_json']);
+    if (!$isPrivate) {
+        $row = [
+            'zeit' => $row['zeit'],
+            'payload' => kiosk_public_weather_payload($row['payload']),
+        ];
+    }
 }
+unset($row);
 
 echo json_encode($rows);

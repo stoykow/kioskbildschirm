@@ -27,6 +27,26 @@ function kiosk_cookie_secure(): bool {
     return $actualHttps || getenv('KIOSK_COOKIE_SECURE') !== '0';
 }
 
+// PHP 8.3 besitzt noch keine native Session-Option für CHIPS.
+function kiosk_partition_session_cookie(bool $dropLegacy = false): void {
+    if (!kiosk_cookie_secure() || headers_sent()) return;
+    $cookies = [];
+    foreach (headers_list() as $header) {
+        if (stripos($header, 'Set-Cookie:') === 0) $cookies[] = $header;
+    }
+    header_remove('Set-Cookie');
+    if ($dropLegacy) {
+        header('Set-Cookie: ' . KIOSK_SESSION_NAME . '=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=None', false);
+    }
+    foreach ($cookies as $header) {
+        if (stripos($header, 'Set-Cookie: ' . KIOSK_SESSION_NAME . '=') === 0
+            && stripos($header, '; Partitioned') === false) {
+            $header .= '; Partitioned';
+        }
+        header($header, false);
+    }
+}
+
 function kiosk_start_session(): bool {
     if (session_status() === PHP_SESSION_ACTIVE) {
         return session_name() === KIOSK_SESSION_NAME;
@@ -35,7 +55,7 @@ function kiosk_start_session(): bool {
         return false;
     }
     session_name(KIOSK_SESSION_NAME);
-    return @session_start([
+    $started = @session_start([
         'use_strict_mode' => 1,
         'use_only_cookies' => 1,
         'use_trans_sid' => 0,
@@ -44,10 +64,12 @@ function kiosk_start_session(): bool {
         'cookie_domain' => '',
         'cookie_secure' => kiosk_cookie_secure(),
         'cookie_httponly' => true,
-        'cookie_samesite' => 'Strict',
+        'cookie_samesite' => kiosk_cookie_secure() ? 'None' : 'Strict',
         'gc_maxlifetime' => KIOSK_SESSION_LIFETIME,
         'cache_limiter' => '',
     ]);
+    kiosk_partition_session_cookie();
+    return $started;
 }
 
 function kiosk_bearer_token(): ?string {
@@ -195,6 +217,7 @@ function kiosk_login(string $provided): bool {
         ],
         'kiosk_csrf' => bin2hex(random_bytes(32)),
     ];
+    kiosk_partition_session_cookie(true);
     return true;
 }
 
@@ -206,8 +229,10 @@ function kiosk_logout(): void {
     $params = session_get_cookie_params();
     setcookie(KIOSK_SESSION_NAME, '', [
         'expires' => time() - 42000, 'path' => '/', 'domain' => '',
-        'secure' => (bool)$params['secure'], 'httponly' => true, 'samesite' => 'Strict',
+        'secure' => (bool)$params['secure'], 'httponly' => true,
+        'samesite' => kiosk_cookie_secure() ? 'None' : 'Strict',
     ]);
+    kiosk_partition_session_cookie(true);
     session_destroy();
 }
 

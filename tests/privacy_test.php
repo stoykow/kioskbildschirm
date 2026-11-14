@@ -51,7 +51,7 @@ function privacy_stop(): void
     $server = null;
 }
 
-function privacy_start(string $token): void
+function privacy_start(string $token, string $secure = '0'): void
 {
     global $server, $temporary, $baseUrl;
     privacy_stop();
@@ -61,7 +61,7 @@ function privacy_start(string $token): void
     fclose($socket);
     $baseUrl = 'http://' . $address;
     $environment = [
-        'KIOSK_TOKEN' => $token, 'HO_TOKEN' => 'fixture-ingest-only', 'KIOSK_COOKIE_SECURE' => '0',
+        'KIOSK_TOKEN' => $token, 'HO_TOKEN' => 'fixture-ingest-only', 'KIOSK_COOKIE_SECURE' => $secure,
         'SystemRoot' => getenv('SystemRoot') ?: '', 'TEMP' => $temporary, 'TMP' => $temporary,
     ];
     $server = proc_open([
@@ -343,6 +343,21 @@ PHP);
         privacy_same(false, privacy_json(privacy_request('probe.php', 'GET', [], null, $cookie))['private']);
         privacy_same(401, privacy_request('probe.php?action=api', 'GET', ['Authorization: Bearer fixture-viewer-one'])['status']);
         privacy_same(200, privacy_request('probe.php?action=api', 'GET', ['Authorization: Bearer fixture-viewer-two'])['status']);
+    });
+    privacy_start('fixture-viewer-two', '1');
+    privacy_case('Frame-Anmeldung setzt Secure SameSite=None und Partitioned mit gültiger Sitzung', function (): void {
+        $response = privacy_request('index.php?TOKEN=fixture-viewer-two');
+        privacy_same(303, $response['status']);
+        $partitioned = array_values(array_filter($response['headers']['set-cookie'] ?? [],
+            fn($header) => stripos($header, 'Partitioned') !== false && !str_contains($header, 'Max-Age=0')));
+        privacy_check(count($partitioned) > 0, 'Partitioniertes Cookie fehlt.');
+        $header = end($partitioned);
+        foreach (['Secure', 'HttpOnly', 'SameSite=None'] as $attribute) {
+            privacy_check(stripos($header, $attribute) !== false, $attribute . ' fehlt.');
+        }
+        $frameCookie = explode(';', $header, 2)[0];
+        privacy_same(true, privacy_json(privacy_request('probe.php', 'GET', [], null, $frameCookie))['private']);
+        privacy_same(403, privacy_request('probe.php?action=api', 'POST', [], [], $frameCookie)['status']);
     });
     privacy_start('');
     privacy_case('Ohne konfiguriertes Secret bleibt jeder Zugang öffentlich', function () use (&$cookie): void {

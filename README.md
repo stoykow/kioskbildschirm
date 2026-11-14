@@ -192,7 +192,11 @@ https://hausordnung.nik0.de/?TOKEN=DEIN_TOKEN
 
 Bei Sonderzeichen muss der Wert URL-kodiert werden. Der Server prüft ihn einmal,
 entfernt den Queryparameter durch eine Weiterleitung und verwendet anschließend
-ein HttpOnly-Cookie mit Secure und SameSite=Strict. Die Sitzung gilt höchstens
+ein HttpOnly-Cookie mit Secure, SameSite=None und Partitioned (CHIPS). Dadurch
+funktioniert die Anmeldung auch im Home-Assistant-Frame einer anderen Domain.
+In der HA-Webseitenkarte muss der vollständige Link mit `?TOKEN=...` stehen;
+die Anmeldung im normalen Browser wird nicht in den Frame übernommen.
+Die Sitzung gilt höchstens
 30 Tage. Ein Tokenwechsel im Container macht bestehende Sitzungen beim nächsten
 Aufruf ungültig. Alternativ kann der Zugangscode in `zugang.php` eingegeben werden.
 API-Clients können `Authorization: Bearer DEIN_TOKEN` verwenden. Private APIs

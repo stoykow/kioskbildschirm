@@ -42,6 +42,16 @@ API/Endpoints:
 - `device_register.php`
 - Cron: `cron_wetter.php`, `cron_abfall.php`, `cron_abfahrten.php`
 
+## Impressum und Datenschutz
+
+`impressum.php` und `datenschutz.php` sind ohne Anmeldung erreichbar. Die Links
+stehen unter der Hausanzeige und auf der Zugangsseite. Beide Seiten verwenden
+nur das lokale Stylesheet `rechtliches.css` und setzen keine Sitzung voraus.
+Die Betreiberangaben wurden von der eigenen Startseite übernommen. Der
+Datenschutztext beschreibt die Hausdaten, den Cookie- und Tablet-Zugang sowie
+die vom Betreiber bestätigte HAProxy- und Docker-Protokollierung. Bei Änderungen
+an Betrieb, Zugängen, Protokollierung oder Datenverarbeitung die Texte mitpflegen.
+
 ## Docker
 
 Auf dem Docker-Host ausführen:

@@ -94,6 +94,7 @@ function kiosk_access_h(string $value): string {
     <?php endif; ?>
     <?php endif; ?>
     <a href="index.php">Zur öffentlichen Ansicht</a>
+    <nav aria-label="Rechtliche Informationen"><a href="impressum.php">Impressum</a> · <a href="datenschutz.php">Datenschutz</a></nav>
 </main>
 </body>
 </html>

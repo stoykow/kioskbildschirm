@@ -11,6 +11,7 @@ if (!function_exists('proc_open')) {
 $failures = [];
 $testCount = 0;
 $server = null;
+require_once dirname(__DIR__) . '/auth.php';
 $temporary = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'hausordnung_privacy_' . bin2hex(random_bytes(8));
 mkdir($temporary, 0700, true);
 mkdir($temporary . '/sessions', 0700);
@@ -172,6 +173,8 @@ echo json_encode(['private' => kiosk_is_private(), 'csrf' => kiosk_csrf_token()]
 PHP);
     file_put_contents($temporary . '/web/config.php', <<<'PHP'
 <?php
+$showMouse = true;
+function departure_limit(string $type): int { return 4; }
 function env_value($key, $default = null) { $value = getenv($key); return $value === false || $value === '' ? $default : $value; }
 function app_config_get(?PDO $pdo = null) { return ['termine_abfall_days' => 14, 'termine_sonstige_days' => 14]; }
 function db_connect() { return new PrivacyFixturePDO(); }
@@ -338,8 +341,35 @@ PHP);
             privacy_same(false, privacy_json(privacy_request('probe.php', 'GET', [], null, privacy_cookie($response)))['private']);
         }
     });
+    $frameTicket = '';
+    privacy_case('Tablet-Einstieg erlaubt private Lese- und Schreibaufrufe ohne Cookies', function () use (&$frameTicket): void {
+        $entry = privacy_request('index.php?TOKEN=fixture-viewer-one&FRAME=1');
+        privacy_same(200, $entry['status']);
+        privacy_same([], $entry['headers']['set-cookie'] ?? []);
+        privacy_check(!str_contains($entry['body'], 'fixture-viewer-one'), 'Haupttoken gelangt ins HTML.');
+        privacy_check(preg_match('/frame1\.[0-9]{10}\.[a-f0-9]{32}\.[a-f0-9]{64}/', $entry['body'], $match) === 1, 'Signiertes Ticket fehlt.');
+        $frameTicket = $match[0];
+        foreach (['GET', 'POST'] as $method) {
+            privacy_same(200, privacy_request('probe.php?action=api', $method, ['Authorization: Bearer ' . $frameTicket])['status']);
+        }
+        privacy_same(200, privacy_request('geraet_status.php?geraet=nukihub5', 'GET', ['Authorization: Bearer ' . $frameTicket])['status']);
+        privacy_same(401, privacy_request('probe.php?action=api&access=' . $frameTicket)['status']);
+        privacy_same(401, privacy_request('probe.php?action=api', 'GET', ['Authorization: Bearer ' . substr($frameTicket, 0, -1) . 'x'])['status']);
+        privacy_same(303, privacy_request('index.php?TOKEN=falsch&FRAME=1')['status']);
+    });
+    privacy_case('Signatur, Ablaufzeit und maximale Laufzeit werden geprüft', function (): void {
+        $now = 1794830400;
+        $ticket = kiosk_frame_ticket('test-key', $now);
+        privacy_same(true, kiosk_frame_ticket_valid($ticket, 'test-key', $now));
+        privacy_same(false, kiosk_frame_ticket_valid($ticket, 'other-key', $now));
+        privacy_same(false, kiosk_frame_ticket_valid($ticket, 'test-key', $now + KIOSK_SESSION_LIFETIME));
+        privacy_same(false, kiosk_frame_ticket_valid($ticket, 'test-key', $now - 1));
+        privacy_same(false, kiosk_frame_ticket_valid($ticket . '.extra', 'test-key', $now));
+        privacy_same(false, kiosk_frame_ticket_valid($ticket, '', $now));
+    });
     privacy_start('fixture-viewer-two');
-    privacy_case('Tokenrotation invalidiert alte Cookies und alte Bearer', function () use (&$cookie): void {
+    privacy_case('Tokenrotation invalidiert alte Cookies, Frame-Tickets und alte Bearer', function () use (&$cookie, &$frameTicket): void {
+        privacy_same(401, privacy_request('probe.php?action=api', 'GET', ['Authorization: Bearer ' . $frameTicket])['status']);
         privacy_same(false, privacy_json(privacy_request('probe.php', 'GET', [], null, $cookie))['private']);
         privacy_same(401, privacy_request('probe.php?action=api', 'GET', ['Authorization: Bearer fixture-viewer-one'])['status']);
         privacy_same(200, privacy_request('probe.php?action=api', 'GET', ['Authorization: Bearer fixture-viewer-two'])['status']);

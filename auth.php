@@ -88,6 +88,23 @@ function kiosk_bearer_token(): ?string {
     return $matches[1];
 }
 
+// Eigene, befristete Berechtigung für WebViews ohne Drittanbieter-Cookies.
+// Der konfigurierte Haupttoken wird niemals an JavaScript zurückgegeben.
+function kiosk_frame_ticket(string $key, ?int $now = null): string {
+    $body = 'frame1.' . (($now ?? time()) + KIOSK_SESSION_LIFETIME) . '.' . bin2hex(random_bytes(16));
+    return $body . '.' . hash_hmac('sha256', 'hausordnung-frame-access:' . $body, $key);
+}
+
+function kiosk_frame_ticket_valid(string $ticket, string $key, ?int $now = null): bool {
+    if ($key === '' || !preg_match('/^(frame1\.([0-9]{10})\.[a-f0-9]{32})\.([a-f0-9]{64})$/D', $ticket, $parts)) {
+        return false;
+    }
+    $now = $now ?? time();
+    $expires = (int)$parts[2];
+    return $expires > $now && $expires <= $now + KIOSK_SESSION_LIFETIME
+        && hash_equals(hash_hmac('sha256', 'hausordnung-frame-access:' . $parts[1], $key), $parts[3]);
+}
+
 /** Gibt session, bearer oder null zurück. Queryparameter autorisieren hier nie. */
 function kiosk_authentication_mode(): ?string {
     kiosk_no_store();
@@ -100,7 +117,7 @@ function kiosk_authentication_mode(): ?string {
         return null;
     }
     $bearer = kiosk_bearer_token();
-    if ($bearer !== null && hash_equals($configured, $bearer)) {
+    if ($bearer !== null && (hash_equals($configured, $bearer) || kiosk_frame_ticket_valid($bearer, $configured))) {
         return 'bearer';
     }
     $hasCookie = isset($_COOKIE[KIOSK_SESSION_NAME]) && is_string($_COOKIE[KIOSK_SESSION_NAME])
@@ -237,14 +254,19 @@ function kiosk_logout(): void {
 }
 
 /** Nur index.php ruft diesen ausdrücklich gewünschten Bookmark-Einstieg auf. */
-function kiosk_handle_entry_token(): void {
+function kiosk_handle_entry_token(): ?string {
     if (!array_key_exists('TOKEN', $_GET)) {
-        return;
+        return null;
     }
     kiosk_no_store();
     header('Referrer-Policy: no-referrer');
     $token = $_GET['TOKEN'];
     $isGet = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'GET';
+    $configured = kiosk_configured_token();
+    if ($isGet && ($_GET['FRAME'] ?? null) === '1' && is_string($token)
+        && $configured !== null && hash_equals($configured, $token)) {
+        return kiosk_frame_ticket($configured);
+    }
     if ($isGet && is_string($token) && kiosk_login($token)) {
         header('Location: index.php', true, 303);
     } else {

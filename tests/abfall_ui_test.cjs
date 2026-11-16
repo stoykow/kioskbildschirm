@@ -55,7 +55,10 @@ function createBrowser(options = {}) {
     };
     const sandbox = {
         Date: BrowserDate, document, console: { error() {} },
-        kioskAccess: options.private === false ? undefined : { private: true, csrf: 'fixture-csrf' },
+        URL,
+        location: new URL(options.url || 'https://kiosk.example/index.php'),
+        history: { replaceState(_state, _title, url) { sandbox.location = new URL(url); } },
+        kioskAccess: options.access ? { private: true, csrf: null, access: options.access } : (options.private === false ? undefined : { private: true, csrf: 'fixture-csrf' }),
         fetch: async (url, requestOptions = {}) => {
             state.requests.push(url);
             state.requestOptions.push(requestOptions);
@@ -327,6 +330,35 @@ test('Nur private Mutationen senden CSRF und öffentliche Mutationen erreichen f
     const publicBrowser = createBrowser({ private: false });
     await assert.rejects(publicBrowser.sandbox.kioskFetch('abfall_api.php', { method: 'POST' }));
     assert.equal(publicBrowser.state.requests.length, 0);
+});
+
+test('Tablet-Zugang entfernt Haupttoken und autorisiert APIs ohne Cookies', async () => {
+    const ticket = 'frame1.1797422400.' + 'a'.repeat(32) + '.' + 'b'.repeat(64);
+    const browser = createBrowser({ access: ticket, url: 'https://kiosk.example/?TOKEN=geheim&FRAME=1' });
+    assert.equal(browser.sandbox.location.search, '');
+    assert.equal(browser.sandbox.location.hash, '#kiosk_access=' + ticket);
+    await browser.sandbox.kioskFetch('abfall_api.php', { method: 'POST' });
+    const request = browser.state.requestOptions[0];
+    assert.equal(request.headers.Authorization, 'Bearer ' + ticket);
+    assert.equal(request.headers['X-CSRF-Token'], undefined);
+    assert.equal(request.credentials, 'omit');
+    assert.equal(request.redirect, 'error');
+    await assert.rejects(browser.sandbox.kioskFetch('https://other.example/'));
+    assert.equal(browser.state.requests.length, 1);
+});
+
+test('Tablet-Zugang übersteht Reloads und verschwindet bei abgelaufener Berechtigung', async () => {
+    const ticket = 'frame1.1797422400.' + 'a'.repeat(32) + '.' + 'b'.repeat(64);
+    const browser = createBrowser({ private: false, url: 'https://kiosk.example/#kiosk_access=' + ticket });
+    assert.equal(browser.sandbox.kioskIsPrivate(), true);
+    await browser.fetchTasks([openTask]);
+    assert.match(browser.html(), /data-task-id="91"/);
+    browser.state.tasksUnauthorized = true;
+    await browser.fetchTasks([openTask]);
+    assert.equal(browser.sandbox.kioskIsPrivate(), false);
+    assert.equal(browser.sandbox.location.hash, '');
+    assert.equal(browser.sandbox.kioskAccess.access, undefined);
+    assert.doesNotMatch(browser.html(), /data-task-id/);
 });
 
 (async () => {

@@ -193,7 +193,8 @@ https://hausordnung.nik0.de/?TOKEN=DEIN_TOKEN
 Bei Sonderzeichen muss der Wert URL-kodiert werden. Der Server prüft ihn einmal,
 entfernt den Queryparameter durch eine Weiterleitung und verwendet anschließend
 ein HttpOnly-Cookie mit Secure, SameSite=None und Partitioned (CHIPS). Dadurch
-funktioniert die Anmeldung auch im Home-Assistant-Frame einer anderen Domain.
+funktioniert die Anmeldung auch in Browsern mit Unterstützung für partitionierte
+Cookies im Home-Assistant-Frame einer anderen Domain.
 In der HA-Webseitenkarte muss der vollständige Link mit `?TOKEN=...` stehen;
 die Anmeldung im normalen Browser wird nicht in den Frame übernommen.
 Die Sitzung gilt höchstens
@@ -201,6 +202,25 @@ Die Sitzung gilt höchstens
 Aufruf ungültig. Alternativ kann der Zugangscode in `zugang.php` eingegeben werden.
 API-Clients können `Authorization: Bearer DEIN_TOKEN` verwenden. Private APIs
 akzeptieren den Queryparameter selbst nicht.
+
+Für Fire-HD-Tablets mit View Assist Companion App (VACA), deren WebView
+Drittanbieter-Cookies blockiert, in der HA-Webseitenkarte diesen Link verwenden:
+
+```text
+https://hausordnung.nik0.de/?TOKEN=DEIN_TOKEN&FRAME=1
+```
+
+`FRAME=1` tauscht den Haupttoken gegen eine signierte, maximal 30 Tage gültige
+Berechtigung. Dafür werden keine Cookies oder Browser-Speicher benötigt.
+JavaScript entfernt den Haupttoken aus der URL und hält nur die abgeleitete
+Berechtigung im URL-Fragment, damit automatische Reloads funktionieren.
+API-Aufrufe senden sie als Authorization-Header ausschließlich an dieselbe
+Domain. Jede API prüft Signatur und Ablaufdatum. Ein Tokenwechsel im Container
+macht auch diese Berechtigungen ungültig. Nach Ablauf das HA-Dashboard neu
+öffnen, damit die hinterlegte vollständige URL erneut geladen wird.
+„Abmelden“ entfernt die Berechtigung aus dieser Ansicht. Eine kopierte
+Berechtigung bleibt bis zum Ablauf oder Tokenwechsel gültig und muss deshalb
+wie ein Zugangscode behandelt werden. Der normale Cookie-Zugang bleibt erhalten.
 
 Der erste Aufruf mit `?TOKEN=...` kann im Zugriffslog eines vorgeschalteten Proxys
 stehen. Solche Logs müssen Queryparameter ausblenden oder `TOKEN` redigieren,

@@ -1,10 +1,10 @@
 <?php
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/auth.php';
-kiosk_handle_entry_token();
+$frameAccess = kiosk_handle_entry_token();
 
-$private = kiosk_is_private();
-$csrf = $private ? kiosk_csrf_token() : null;
+$private = $frameAccess !== null || kiosk_is_private();
+$csrf = $private && $frameAccess === null ? kiosk_csrf_token() : null;
 
 header("Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0");
 header("Pragma: no-cache");
@@ -25,7 +25,8 @@ header('Referrer-Policy: no-referrer');
 <body class="<?php echo $showMouse ? '' : 'hide-mouse'; ?>">
     <nav class="kiosk-accessbar" aria-label="Privater Zugang">
         <a id="kiosk-login" href="zugang.php"<?php echo $private ? ' hidden' : ''; ?>>Privater Bereich</a>
-        <?php if ($private): ?>
+        <button id="kiosk-frame-logout" class="kiosk-access-button" type="button" hidden>Abmelden</button>
+        <?php if ($private && $frameAccess === null): ?>
         <form id="kiosk-logout" method="post" action="zugang.php?logout=1">
             <input type="hidden" name="_kiosk_csrf" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
             <button class="kiosk-access-button" type="submit">Abmelden</button>
@@ -45,7 +46,7 @@ header('Referrer-Policy: no-referrer');
     </div>
 
     <script>
-        window.kioskAccess = <?php echo json_encode(['private' => $private, 'csrf' => $csrf], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+        window.kioskAccess = <?php echo json_encode(['private' => $private, 'csrf' => $csrf, 'access' => $frameAccess], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
     </script>
     <script src="kiosk.js?v=<?php echo time(); ?>"></script>
     <script src="wetter.js?v=<?php echo time(); ?>"></script>

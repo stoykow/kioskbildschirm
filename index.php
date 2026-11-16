@@ -25,13 +25,6 @@ header('Referrer-Policy: no-referrer');
 <body class="<?php echo $showMouse ? '' : 'hide-mouse'; ?>">
     <nav class="kiosk-accessbar" aria-label="Privater Zugang">
         <a id="kiosk-login" href="zugang.php"<?php echo $private ? ' hidden' : ''; ?>>Privater Bereich</a>
-        <button id="kiosk-frame-logout" class="kiosk-access-button" type="button" hidden>Abmelden</button>
-        <?php if ($private && $frameAccess === null): ?>
-        <form id="kiosk-logout" method="post" action="zugang.php?logout=1">
-            <input type="hidden" name="_kiosk_csrf" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
-            <button class="kiosk-access-button" type="submit">Abmelden</button>
-        </form>
-        <?php endif; ?>
     </nav>
     <div id="main-flex">
         <div id="links">

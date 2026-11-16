@@ -230,7 +230,8 @@ API-Aufrufe senden sie als Authorization-Header ausschließlich an dieselbe
 Domain. Jede API prüft Signatur und Ablaufdatum. Ein Tokenwechsel im Container
 macht auch diese Berechtigungen ungültig. Nach Ablauf das HA-Dashboard neu
 öffnen, damit die hinterlegte vollständige URL erneut geladen wird.
-„Abmelden“ entfernt die Berechtigung aus dieser Ansicht. Eine kopierte
+Die Kiosk-Anzeige enthält keinen Abmeldebutton. Für die öffentliche Tablet-Ansicht
+die Adresse ohne Zugangscode und ohne URL-Fragment neu öffnen. Eine kopierte
 Berechtigung bleibt bis zum Ablauf oder Tokenwechsel gültig und muss deshalb
 wie ein Zugangscode behandelt werden. Der normale Cookie-Zugang bleibt erhalten.
 
@@ -242,7 +243,8 @@ im HTML noch in Weiterleitungszielen aus. Für lokale HTTP-Tests darf ausschlie�
 
 Private Änderungen erfordern bei Cookie-Anmeldung zusätzlich CSRF. Nach Ablauf
 der Sitzung werden private Anzeigen und Browser-Caches entfernt. Der private
-Zugang lässt sich über „Abmelden“ beenden. Allgemeine Termine bleiben sichtbar,
+Cookie-Zugang lässt sich bei Bedarf über `zugang.php?logout=1` beenden.
+Allgemeine Termine bleiben sichtbar,
 enthalten öffentlich aber keine Erlediger, Anwesenheitsnamen oder privaten Statusfelder.
 
 Die Zugriffskontrolle wird mit `php tests/privacy_test.php` und

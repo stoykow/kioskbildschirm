@@ -21,17 +21,6 @@ if (window.location && window.history) {
         kioskSetFrameFragment(ticket);
         const login = document.getElementById('kiosk-login');
         if (login) login.hidden = true;
-        const cookieLogout = document.getElementById('kiosk-logout');
-        if (cookieLogout) cookieLogout.hidden = true;
-        const logout = document.getElementById('kiosk-frame-logout');
-        if (logout) {
-            logout.hidden = false;
-            logout.onclick = () => {
-                window.kioskHandleUnauthorized();
-                // Die Zugangsseite zeigt keine privaten Daten, auch bei alten Cookies.
-                window.location.replace('zugang.php');
-            };
-        }
     }
 }
 
@@ -52,8 +41,6 @@ window.kioskHandleUnauthorized = function () {
     }
     window.kioskAccess = { private: false, csrf: null };
     if (kioskLegalFooter) kioskLegalFooter.hidden = false;
-    const frameLogout = document.getElementById('kiosk-frame-logout');
-    if (frameLogout) frameLogout.hidden = true;
     // Private Inhalte sofort entfernen, auch wenn ein späteres Neurendern scheitert.
     document.querySelectorAll('.task-title, .task-row, .sonstige-status, .waste-status, #weather-door-row, #task-modal, #waste-modal, #sonstige-modal')
         .forEach(element => element.remove());
@@ -61,8 +48,6 @@ window.kioskHandleUnauthorized = function () {
         try { cleanup(); }
         catch (error) { console.error('Private Ansicht konnte nicht vollständig zurückgesetzt werden:', error); }
     });
-    const logout = document.getElementById('kiosk-logout');
-    if (logout) logout.remove();
     const login = document.getElementById('kiosk-login');
     if (login) login.hidden = false;
 };

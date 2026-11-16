@@ -357,12 +357,15 @@ PHP);
         privacy_same(401, privacy_request('probe.php?action=api', 'GET', ['Authorization: Bearer ' . substr($frameTicket, 0, -1) . 'x'])['status']);
         privacy_same(303, privacy_request('index.php?TOKEN=falsch&FRAME=1')['status']);
     });
-    privacy_case('Signatur, Ablaufzeit und maximale Laufzeit werden geprüft', function (): void {
+    privacy_case('Tablet-Zugang gilt zehn Jahre, Signatur und Ablaufzeit werden geprüft', function (): void {
         $now = 1794830400;
         $ticket = kiosk_frame_ticket('test-key', $now);
         privacy_same(true, kiosk_frame_ticket_valid($ticket, 'test-key', $now));
+        privacy_same($now + 315360000, (int)explode('.', $ticket)[1]);
+        privacy_same(true, kiosk_frame_ticket_valid($ticket, 'test-key', $now + 31 * 86400));
+        privacy_same(true, kiosk_frame_ticket_valid($ticket, 'test-key', $now + 315360000 - 1));
         privacy_same(false, kiosk_frame_ticket_valid($ticket, 'other-key', $now));
-        privacy_same(false, kiosk_frame_ticket_valid($ticket, 'test-key', $now + KIOSK_SESSION_LIFETIME));
+        privacy_same(false, kiosk_frame_ticket_valid($ticket, 'test-key', $now + 315360000));
         privacy_same(false, kiosk_frame_ticket_valid($ticket, 'test-key', $now - 1));
         privacy_same(false, kiosk_frame_ticket_valid($ticket . '.extra', 'test-key', $now));
         privacy_same(false, kiosk_frame_ticket_valid($ticket, '', $now));

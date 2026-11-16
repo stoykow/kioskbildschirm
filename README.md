@@ -210,7 +210,7 @@ Drittanbieter-Cookies blockiert, in der HA-Webseitenkarte diesen Link verwenden:
 https://hausordnung.nik0.de/?TOKEN=DEIN_TOKEN&FRAME=1
 ```
 
-`FRAME=1` tauscht den Haupttoken gegen eine signierte, maximal 30 Tage gültige
+`FRAME=1` tauscht den Haupttoken gegen eine signierte, zehn Jahre (3650 Tage) gültige
 Berechtigung. Dafür werden keine Cookies oder Browser-Speicher benötigt.
 JavaScript entfernt den Haupttoken aus der URL und hält nur die abgeleitete
 Berechtigung im URL-Fragment, damit automatische Reloads funktionieren.

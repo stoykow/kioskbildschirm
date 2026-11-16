@@ -3,6 +3,7 @@
 
 const KIOSK_SESSION_NAME = 'hausordnung_kiosk';
 const KIOSK_SESSION_LIFETIME = 30 * 24 * 60 * 60;
+const KIOSK_FRAME_LIFETIME = 10 * 365 * 24 * 60 * 60;
 
 function kiosk_no_store(): void {
     if (!headers_sent()) {
@@ -91,7 +92,7 @@ function kiosk_bearer_token(): ?string {
 // Eigene, befristete Berechtigung für WebViews ohne Drittanbieter-Cookies.
 // Der konfigurierte Haupttoken wird niemals an JavaScript zurückgegeben.
 function kiosk_frame_ticket(string $key, ?int $now = null): string {
-    $body = 'frame1.' . (($now ?? time()) + KIOSK_SESSION_LIFETIME) . '.' . bin2hex(random_bytes(16));
+    $body = 'frame1.' . (($now ?? time()) + KIOSK_FRAME_LIFETIME) . '.' . bin2hex(random_bytes(16));
     return $body . '.' . hash_hmac('sha256', 'hausordnung-frame-access:' . $body, $key);
 }
 
@@ -101,7 +102,7 @@ function kiosk_frame_ticket_valid(string $ticket, string $key, ?int $now = null)
     }
     $now = $now ?? time();
     $expires = (int)$parts[2];
-    return $expires > $now && $expires <= $now + KIOSK_SESSION_LIFETIME
+    return $expires > $now && $expires <= $now + KIOSK_FRAME_LIFETIME
         && hash_equals(hash_hmac('sha256', 'hausordnung-frame-access:' . $parts[1], $key), $parts[3]);
 }
 

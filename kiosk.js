@@ -39,6 +39,9 @@ window.kioskIsPrivate = function () {
     return !!(window.kioskAccess && window.kioskAccess.private === true);
 };
 
+const kioskLegalFooter = document.getElementById('kiosk-legal');
+if (kioskLegalFooter) kioskLegalFooter.hidden = window.kioskIsPrivate();
+
 window.kioskRegisterPrivateCleanup = function (cleanup) {
     kioskPrivateCleanups.push(cleanup);
 };
@@ -48,6 +51,7 @@ window.kioskHandleUnauthorized = function () {
         kioskSetFrameFragment(null);
     }
     window.kioskAccess = { private: false, csrf: null };
+    if (kioskLegalFooter) kioskLegalFooter.hidden = false;
     const frameLogout = document.getElementById('kiosk-frame-logout');
     if (frameLogout) frameLogout.hidden = true;
     // Private Inhalte sofort entfernen, auch wenn ein späteres Neurendern scheitert.

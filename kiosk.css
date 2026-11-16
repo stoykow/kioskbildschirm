@@ -48,6 +48,7 @@ body.hide-mouse * {
 .kiosk-accessbar form { margin: 0; }
 .kiosk-legal { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.2rem; padding: 1rem; font-size: 0.85rem; }
 .kiosk-legal a { color: var(--text-dim); }
+.kiosk-legal[hidden] { display: none; }
 .kiosk-accessbar [hidden] { display: none; }
 .kiosk-accessbar a { color: var(--text-dim); }
 .kiosk-access-button {

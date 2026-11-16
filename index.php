@@ -45,7 +45,7 @@ header('Referrer-Policy: no-referrer');
         </div>
     </div>
 
-    <footer class="kiosk-legal" aria-label="Rechtliche Informationen">
+    <footer id="kiosk-legal" class="kiosk-legal" aria-label="Rechtliche Informationen"<?php echo $private ? ' hidden' : ''; ?>>
         <a href="impressum.php">Impressum</a>
         <a href="datenschutz.php">Datenschutz</a>
     </footer>

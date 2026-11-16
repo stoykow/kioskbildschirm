@@ -45,7 +45,9 @@ API/Endpoints:
 ## Impressum und Datenschutz
 
 `impressum.php` und `datenschutz.php` sind ohne Anmeldung erreichbar. Die Links
-stehen unter der Hausanzeige und auf der Zugangsseite. Beide Seiten verwenden
+stehen unter der öffentlichen Hausanzeige und auf der Zugangsseite. Bei aktivem
+privaten Zugang wird die Fußzeile der Hausanzeige ausgeblendet, auch im
+Tablet-Modus. Nach Ablauf des Zugangs wird sie wieder eingeblendet. Beide Seiten verwenden
 nur das lokale Stylesheet `rechtliches.css` und setzen keine Sitzung voraus.
 Die Betreiberangaben wurden von der eigenen Startseite übernommen. Der
 Datenschutztext beschreibt die Hausdaten, den Cookie- und Tablet-Zugang sowie
